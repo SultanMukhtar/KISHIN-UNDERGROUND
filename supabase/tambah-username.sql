@@ -1,0 +1,3 @@
+-- File ini udah gak dipakai lagi (boleh dihapus).
+-- Login pakai username + akun superadmin sekarang ada di schema.sql:
+-- cukup Run ulang seluruh isi schema.sql di SQL Editor.

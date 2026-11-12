@@ -1,6 +1,7 @@
 -- =========================================================
 -- 1C UNDERGROUND FIGHT - SCHEMA SUPABASE
--- Jalankan SEKALI di Supabase > SQL Editor > New query > Run
+-- Jalankan di Supabase > SQL Editor > New query > Run.
+-- Aman di-Run ulang (data gak kehapus) kalau ada versi baru.
 -- =========================================================
 
 -- ---------- PENGATURAN (cuma 1 baris) ----------
@@ -67,39 +68,67 @@ left join bets b on b.match_id = m.id
 group by m.id;
 
 -- =========================================================
--- KEAMANAN (Row Level Security)
--- Penonton (anon) cuma bisa BACA. Cuma email yang ada di admin_emails yang bisa ngedit.
+-- AKUN ADMIN
+-- role 'superadmin' (cuma boleh 1): semua operasional + pengaturan + kelola akun admin
+-- role 'admin'                     : pendaftaran, bracket, taruhan
+-- Akun dibuat/dihapus lewat panel /admin (server), bukan dari SQL.
 -- =========================================================
-create table if not exists admin_emails (email text primary key);
-alter table admin_emails enable row level security;  -- tanpa policy = gak bisa dibaca/diubah dari website
-revoke all on admin_emails from anon, authenticated;
+drop function if exists admin_login_email(text);
+drop table if exists admin_emails;   -- sistem lama (login pakai email), diganti admin_accounts
+
+create table if not exists admin_accounts (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  username text not null,
+  email text not null,            -- email internal Supabase Auth, gak pernah tampil di website
+  role text not null default 'admin' check (role in ('admin', 'superadmin')),
+  created_at timestamptz not null default now()
+);
+create unique index if not exists admin_accounts_username_key on admin_accounts (lower(username));
+create unique index if not exists admin_accounts_one_superadmin on admin_accounts (role) where role = 'superadmin';
+alter table admin_accounts enable row level security;
 
 create or replace function is_admin() returns boolean
 language sql stable security definer set search_path = public as $$
-  select exists (select 1 from admin_emails where lower(email) = lower(coalesce(auth.jwt() ->> 'email', '')));
+  select exists (select 1 from admin_accounts where user_id = auth.uid());
+$$;
+create or replace function is_superadmin() returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from admin_accounts where user_id = auth.uid() and role = 'superadmin');
 $$;
 grant execute on function is_admin() to anon, authenticated;
+grant execute on function is_superadmin() to anon, authenticated;
+
+drop policy if exists "read own or superadmin" on admin_accounts;
+create policy "read own or superadmin" on admin_accounts for select to authenticated
+  using (user_id = auth.uid() or is_superadmin());
+revoke insert, update, delete on admin_accounts from anon, authenticated;
+
+-- =========================================================
+-- KEAMANAN (Row Level Security)
+-- Penonton (anon) cuma bisa BACA. Admin ngelola operasional, pengaturan cuma superadmin.
+-- =========================================================
 alter table settings enable row level security;
 alter table fighters enable row level security;
 alter table matches  enable row level security;
 alter table bets     enable row level security;
 
-drop policy if exists "public read settings" on settings;
-drop policy if exists "admin all settings"   on settings;
-drop policy if exists "public read fighters" on fighters;
-drop policy if exists "admin all fighters"   on fighters;
-drop policy if exists "public read matches"  on matches;
-drop policy if exists "admin all matches"    on matches;
-drop policy if exists "admin all bets"       on bets;
+drop policy if exists "public read settings"     on settings;
+drop policy if exists "admin all settings"       on settings;
+drop policy if exists "superadmin edit settings" on settings;
+drop policy if exists "public read fighters"     on fighters;
+drop policy if exists "admin all fighters"       on fighters;
+drop policy if exists "public read matches"      on matches;
+drop policy if exists "admin all matches"        on matches;
+drop policy if exists "admin all bets"           on bets;
 
-create policy "public read settings" on settings for select to anon, authenticated using (true);
-create policy "admin all settings"   on settings for all to authenticated using (is_admin()) with check (is_admin());
-create policy "public read fighters" on fighters for select to anon, authenticated using (true);
-create policy "admin all fighters"   on fighters for all to authenticated using (is_admin()) with check (is_admin());
-create policy "public read matches"  on matches  for select to anon, authenticated using (true);
-create policy "admin all matches"    on matches  for all to authenticated using (is_admin()) with check (is_admin());
+create policy "public read settings"     on settings for select to anon, authenticated using (true);
+create policy "superadmin edit settings" on settings for update to authenticated using (is_superadmin()) with check (is_superadmin());
+create policy "public read fighters"     on fighters for select to anon, authenticated using (true);
+create policy "admin all fighters"       on fighters for all to authenticated using (is_admin()) with check (is_admin());
+create policy "public read matches"      on matches  for select to anon, authenticated using (true);
+create policy "admin all matches"        on matches  for all to authenticated using (is_admin()) with check (is_admin());
 -- bets TIDAK bisa dibaca publik (nama bettor & nominal per orang tetap rahasia)
-create policy "admin all bets"       on bets     for all to authenticated using (is_admin()) with check (is_admin());
+create policy "admin all bets"           on bets     for all to authenticated using (is_admin()) with check (is_admin());
 
 -- Penonton cuma boleh lihat kolom fighter yang aman (status bayar, fee, catatan disembunyikan)
 revoke select on fighters from anon;
@@ -117,7 +146,8 @@ begin
 end $$;
 
 -- =========================================================
--- STORAGE FOTO (fighter + hero), maks 5 MB per file
+-- STORAGE FOTO, maks 5 MB per file
+-- fighters/ → semua admin, hero/ → cuma superadmin
 -- =========================================================
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('photos', 'photos', true, 5242880, array['image/jpeg','image/png','image/webp','image/gif'])
@@ -129,12 +159,13 @@ drop policy if exists "admin update photos"  on storage.objects;
 drop policy if exists "admin delete photos"  on storage.objects;
 
 create policy "public read photos"  on storage.objects for select to anon, authenticated using (bucket_id = 'photos');
-create policy "admin upload photos" on storage.objects for insert to authenticated with check (bucket_id = 'photos' and is_admin());
-create policy "admin update photos" on storage.objects for update to authenticated using (bucket_id = 'photos' and is_admin());
-create policy "admin delete photos" on storage.objects for delete to authenticated using (bucket_id = 'photos' and is_admin());
+create policy "admin upload photos" on storage.objects for insert to authenticated with check (
+  bucket_id = 'photos' and (is_superadmin() or (is_admin() and (storage.foldername(name))[1] = 'fighters')));
+create policy "admin update photos" on storage.objects for update to authenticated using (
+  bucket_id = 'photos' and (is_superadmin() or (is_admin() and (storage.foldername(name))[1] = 'fighters')));
+create policy "admin delete photos" on storage.objects for delete to authenticated using (
+  bucket_id = 'photos' and (is_superadmin() or (is_admin() and (storage.foldername(name))[1] = 'fighters')));
 
 -- =========================================================
--- DAFTARKAN EMAIL ADMIN (ganti dengan email akun panitia yang kamu buat
--- di Authentication > Users). Boleh lebih dari satu baris.
+-- AKUN SUPERADMIN: buka /admin setelah ini → isi form "Bikin akun superadmin".
 -- =========================================================
--- insert into admin_emails (email) values ('panitia1c@contoh.com');
