@@ -53,7 +53,9 @@ Setelah itu form ini hilang selamanya dan `/admin` jadi halaman login biasa (**u
 
 | | Superadmin (Hito Kassa) | Admin |
 |---|---|---|
-| Pendaftaran, Bracket, Taruhan | ✓ | ✓ |
+| Pendaftaran, isi pemenang, "Tampil hari ini", catat taruhan | ✓ | ✓ |
+| Generate / buat ulang bracket | ✓ | – |
+| Ubah house cut per match, lihat untung kas 1C | ✓ | – |
 | Pengaturan (hero, biaya daftar, house cut default) | ✓ | – |
 | Akun Admin: tambah, hapus, ganti password | ✓ | – |
 
@@ -68,9 +70,9 @@ Setelah itu form ini hilang selamanya dan `/admin` jadi halaman login biasa (**u
 | Tugas | Siapa | Di mana |
 |---|---|---|
 | Daftarin fighter, upload foto, tandai sudah bayar | Finance Registration | `/admin` → Pendaftaran |
-| Generate bracket (setelah pendaftaran ditutup) | Bracket Coordinator | `/admin` → Bracket → **Generate bracket** |
+| Generate bracket (setelah pendaftaran ditutup) | Superadmin | `/admin` → Bracket → **Generate bracket** |
 | Centang "Tampil hari ini" buat match yang dipanggil ke arena | Bracket Coordinator / MC | `/admin` → Bracket |
-| Catat taruhan sebelum fight mulai | Finance Betting | `/admin` → Taruhan |
+| Catat taruhan (nama, rekening/Yentag, jagoan, nominal) sebelum fight mulai | Finance Betting | `/admin` → Taruhan |
 | Klik **Menang** di fighter yang menang (KO) | Referee / Bracket Coordinator | `/admin` → Bracket |
 | Bayar bettor yang menang, centang "Sudah dibayar" | Finance Betting | `/admin` → Taruhan |
 
@@ -90,7 +92,7 @@ Catatan:
 ## Sistem taruhan
 
 - Yang menang: **modal balik utuh + bagian dari uang pihak yang kalah**, dibagi sesuai besar taruhan.
-- **House cut** (default 20%, bisa diubah per match) cuma dipotong dari uang pihak yang kalah.
+- **House cut** (default 20%, bisa diubah per match oleh superadmin) cuma dipotong dari uang pihak yang kalah.
 - Kalau gak ada yang taruh ke fighter yang menang, seluruh uang pihak kalah masuk kas 1C.
 - Pecahan Yen dibulatkan ke bawah ke bettor; sisanya masuk kas 1C.
 

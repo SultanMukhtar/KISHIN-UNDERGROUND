@@ -6,14 +6,16 @@ import { generateBracket, roundLabel, totalRounds, winnerPatches } from "@/lib/b
 import type { TabProps } from "@/lib/adminTypes";
 import type { Match } from "@/lib/types";
 
-export default function BracketTab({ data, reload, notify }: TabProps) {
+export default function BracketTab({ me, data, reload, notify }: TabProps) {
   const { matches, fighters, bets, settings } = data;
+  const isSuper = me.role === "superadmin";
   const [busy, setBusy] = useState(false);
   const byId = useMemo(() => new Map(fighters.map((f) => [f.id, f])), [fighters]);
   const total = totalRounds(matches);
   const paid = fighters.filter((f) => f.paid);
 
   async function generate() {
+    if (!isSuper) return notify("Cuma superadmin yang boleh generate bracket.", true);
     const warn = matches.length
       ? `Bracket lama (${matches.length} match) dan SEMUA taruhan (${bets.length}) akan dihapus dan dibuat ulang. Lanjut?`
       : `Buat bracket dari ${paid.length} fighter yang sudah bayar? Urutan diacak.`;
@@ -71,18 +73,27 @@ export default function BracketTab({ data, reload, notify }: TabProps) {
 
   return (
     <>
-      <div className="card">
-        <h3>Generate bracket otomatis</h3>
-        <p style={{ fontSize: 13, color: "var(--muted)", marginTop: 0 }}>
-          Pakai {paid.length} fighter yang statusnya <strong>Sudah bayar</strong>. Diacak, sisa slot jadi BYE (lolos otomatis), pemenang otomatis maju ke ronde berikutnya, yang kalah di semifinal otomatis masuk Perebutan Juara 3.
-        </p>
-        <div className="row-actions">
-          <button className="btn" onClick={generate} disabled={busy || paid.length < 2}>{matches.length ? "Buat ulang bracket" : "Generate bracket"}</button>
-          {featuredCount > 0 && <button className="btn ghost" onClick={clearFeatured} disabled={busy}>Lepas semua &quot;Tampil Hari Ini&quot; ({featuredCount})</button>}
+      {isSuper && (
+        <div className="card">
+          <h3>Generate bracket otomatis</h3>
+          <p style={{ fontSize: 13, color: "var(--muted)", marginTop: 0 }}>
+            Pakai {paid.length} fighter yang statusnya <strong>Sudah bayar</strong>. Diacak, sisa slot jadi BYE (lolos otomatis), pemenang otomatis maju ke ronde berikutnya, yang kalah di semifinal otomatis masuk Perebutan Juara 3.
+          </p>
+          <div className="row-actions">
+            <button className="btn" onClick={generate} disabled={busy || paid.length < 2}>{matches.length ? "Buat ulang bracket" : "Generate bracket"}</button>
+          </div>
         </div>
-      </div>
+      )}
 
-      {groups.length === 0 && <div className="empty-state">Belum ada bracket.</div>}
+      {featuredCount > 0 && (
+        <div className="row-actions" style={{ marginTop: 12 }}>
+          <button className="btn ghost" onClick={clearFeatured} disabled={busy}>Lepas semua &quot;Tampil Hari Ini&quot; ({featuredCount})</button>
+        </div>
+      )}
+
+      {groups.length === 0 && (
+        <div className="empty-state">{isSuper ? "Belum ada bracket." : "Belum ada bracket. Tunggu superadmin generate bracket."}</div>
+      )}
       {groups.map((g) => (
         <section key={g.key} style={{ marginTop: 22 }}>
           <div className="sec-head"><h2>{g.label}</h2><span className="sub">{g.items.filter((m) => m.winner_id).length}/{g.items.length} selesai</span></div>

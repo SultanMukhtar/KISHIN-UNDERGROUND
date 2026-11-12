@@ -41,8 +41,9 @@ function calc(m: Match, bets: Bet[]): MatchCalc {
   return { m, bets, pool1, pool2, results, house, paidOutTotal };
 }
 
-export default function BettingTab({ data, reload, notify }: TabProps) {
+export default function BettingTab({ me, data, reload, notify }: TabProps) {
   const { matches, fighters, bets } = data;
+  const isSuper = me.role === "superadmin";
   const byId = useMemo(() => new Map(fighters.map((f) => [f.id, f])), [fighters]);
   const total = totalRounds(matches);
   const open = matches.filter((m) => m.fighter1_id && m.fighter2_id);
@@ -51,6 +52,7 @@ export default function BettingTab({ data, reload, notify }: TabProps) {
   const selected = open.find((m) => m.id === (matchId ?? firstOpen?.id));
 
   const [bettor, setBettor] = useState("");
+  const [account, setAccount] = useState("");
   const [pick, setPick] = useState<string>("");
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
@@ -69,11 +71,13 @@ export default function BettingTab({ data, reload, notify }: TabProps) {
     const amt = parseInt(amount.replace(/\D/g, ""), 10);
     if (!bettor.trim() || !pick || !amt) return notify("Isi nama bettor, jagoan, dan nominal.", true);
     setBusy(true);
-    const { error } = await sb().from("bets").insert({ match_id: selected.id, bettor_name: bettor.trim(), fighter_id: pick, amount: amt });
+    const { error } = await sb().from("bets").insert({
+      match_id: selected.id, bettor_name: bettor.trim(), bettor_account: account.trim() || null, fighter_id: pick, amount: amt,
+    });
     if (error) notify(error.message, true);
     else {
       notify(`Taruhan ${bettor.trim()} ${yen(amt)} ke ${name(pick)} dicatat.`);
-      setBettor(""); setAmount("");
+      setBettor(""); setAccount(""); setAmount("");
       await reload();
     }
     setBusy(false);
@@ -93,6 +97,7 @@ export default function BettingTab({ data, reload, notify }: TabProps) {
   }
 
   async function setCut(m: Match, pct: string) {
+    if (!isSuper) return;
     const v = Math.min(Math.max(parseFloat(pct) || 0, 0), 90) / 100;
     const { error } = await sb().from("matches").update({ house_cut: v }).eq("id", m.id);
     if (error) return notify(error.message, true);
@@ -103,7 +108,7 @@ export default function BettingTab({ data, reload, notify }: TabProps) {
     <>
       <div className="stats">
         <div className="stat"><div className="k">Total uang taruhan</div><div className="v mono">{yen(totalBet)}</div></div>
-        <div className="stat"><div className="k">Untung kas 1C</div><div className="v mono" style={{ color: "var(--green)" }}>{yen(houseTotal)}</div></div>
+        {isSuper && <div className="stat"><div className="k">Untung kas 1C</div><div className="v mono" style={{ color: "var(--green)" }}>{yen(houseTotal)}</div></div>}
         <div className="stat"><div className="k">Belum dibayar ke bettor</div><div className="v mono" style={{ color: unpaid ? "var(--red)" : undefined }}>{yen(unpaid)}</div></div>
         <div className="stat"><div className="k">Jumlah taruhan</div><div className="v">{bets.length}</div></div>
       </div>
@@ -131,11 +136,15 @@ export default function BettingTab({ data, reload, notify }: TabProps) {
                   <div style={{ fontSize: 12, color: "var(--muted)" }}>kalau menang x{multiplier(cur.pool1, cur.pool2, selected.house_cut)?.toFixed(2) ?? "-"}</div></div>
                 <div className="stat"><div className="k">{name(selected.fighter2_id)}</div><div className="v mono">{yen(cur.pool2)}</div>
                   <div style={{ fontSize: 12, color: "var(--muted)" }}>kalau menang x{multiplier(cur.pool2, cur.pool1, selected.house_cut)?.toFixed(2) ?? "-"}</div></div>
-                <div className="stat"><div className="k">House cut (%)</div>
-                  <input type="number" min={0} max={90} step={1} defaultValue={Math.round(selected.house_cut * 100)} key={selected.id + selected.house_cut}
-                    onBlur={(e) => setCut(selected, e.target.value)} style={{ marginTop: 4 }} />
-                  <div style={{ fontSize: 12, color: "var(--muted)" }}>dipotong dari uang pihak kalah</div></div>
-                <div className="stat"><div className="k">Untung 1C match ini</div><div className="v mono">{selected.winner_id ? yen(cur.house) : "-"}</div></div>
+                {isSuper && (
+                  <>
+                    <div className="stat"><div className="k">House cut (%)</div>
+                      <input type="number" min={0} max={90} step={1} defaultValue={Math.round(selected.house_cut * 100)} key={selected.id + selected.house_cut}
+                        onBlur={(e) => setCut(selected, e.target.value)} style={{ marginTop: 4 }} />
+                      <div style={{ fontSize: 12, color: "var(--muted)" }}>dipotong dari uang pihak kalah</div></div>
+                    <div className="stat"><div className="k">Untung 1C match ini</div><div className="v mono">{selected.winner_id ? yen(cur.house) : "-"}</div></div>
+                  </>
+                )}
               </div>
 
               {!selected.winner_id ? (
@@ -143,6 +152,7 @@ export default function BettingTab({ data, reload, notify }: TabProps) {
                   <h3>Catat taruhan baru</h3>
                   <div className="form-grid">
                     <label className="f">Nama bettor<input type="text" value={bettor} onChange={(e) => setBettor(e.target.value)} required /></label>
+                    <label className="f">Rekening / Yentag<input type="text" value={account} onChange={(e) => setAccount(e.target.value)} placeholder="buat transfer kalau menang" maxLength={100} /></label>
                     <label className="f">Jagoan
                       <select value={pick} onChange={(e) => setPick(e.target.value)} required>
                         <option value="">Pilih…</option>
@@ -163,13 +173,14 @@ export default function BettingTab({ data, reload, notify }: TabProps) {
               ) : (
                 <div className="table-wrap">
                   <table>
-                    <thead><tr><th>Bettor</th><th>Jagoan</th><th>Taruhan</th><th>Status</th><th>Payout</th><th>Dibayar</th><th></th></tr></thead>
+                    <thead><tr><th>Bettor</th><th>Rekening / Yentag</th><th>Jagoan</th><th>Taruhan</th><th>Status</th><th>Payout</th><th>Dibayar</th><th></th></tr></thead>
                     <tbody>
                       {cur.bets.map((b) => {
                         const r = cur.results.get(b.id)!;
                         return (
                           <tr key={b.id}>
                             <td><strong>{b.bettor_name}</strong></td>
+                            <td className="mono">{b.bettor_account || <span style={{ color: "var(--muted)" }}>-</span>}</td>
                             <td>{name(b.fighter_id)}</td>
                             <td className="mono">{yen(b.amount)}</td>
                             <td><span className={"pill " + (r.status === "Menang" || r.status === "Batal" ? "ok" : r.status === "Kalah" ? "no" : "neutral")}>{r.status}</span></td>

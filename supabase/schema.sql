@@ -50,10 +50,12 @@ create table if not exists bets (
   match_id uuid not null references matches(id) on delete cascade,
   bettor_name text not null,
   fighter_id uuid not null references fighters(id) on delete cascade,
+  bettor_account text,                       -- rekening / Yentag buat transfer payout
   amount int not null check (amount > 0),
   paid_out boolean not null default false,   -- sudah dibayar ke bettor yang menang?
   created_at timestamptz not null default now()
 );
+alter table bets add column if not exists bettor_account text;   -- buat database yang dibuat sebelum kolom ini ada
 create index if not exists bets_match_idx on bets(match_id);
 
 -- ---------- TOTAL POOL PER MATCH (aman buat publik, tanpa nama bettor) ----------
@@ -69,8 +71,9 @@ group by m.id;
 
 -- =========================================================
 -- AKUN ADMIN
--- role 'superadmin' (cuma boleh 1): semua operasional + pengaturan + kelola akun admin
--- role 'admin'                     : pendaftaran, bracket, taruhan
+-- role 'superadmin' (cuma boleh 1): semua operasional + generate bracket + house cut + untung kas
+--                                   + pengaturan + kelola akun admin
+-- role 'admin'                     : pendaftaran, isi pemenang & "tampil hari ini", catat taruhan
 -- Akun dibuat/dihapus lewat panel /admin (server), bukan dari SQL.
 -- =========================================================
 drop function if exists admin_login_email(text);
@@ -119,6 +122,9 @@ drop policy if exists "public read fighters"     on fighters;
 drop policy if exists "admin all fighters"       on fighters;
 drop policy if exists "public read matches"      on matches;
 drop policy if exists "admin all matches"        on matches;
+drop policy if exists "admin update matches"     on matches;
+drop policy if exists "superadmin insert matches" on matches;
+drop policy if exists "superadmin delete matches" on matches;
 drop policy if exists "admin all bets"           on bets;
 
 create policy "public read settings"     on settings for select to anon, authenticated using (true);
@@ -126,7 +132,25 @@ create policy "superadmin edit settings" on settings for update to authenticated
 create policy "public read fighters"     on fighters for select to anon, authenticated using (true);
 create policy "admin all fighters"       on fighters for all to authenticated using (is_admin()) with check (is_admin());
 create policy "public read matches"      on matches  for select to anon, authenticated using (true);
-create policy "admin all matches"        on matches  for all to authenticated using (is_admin()) with check (is_admin());
+-- Admin cuma boleh UPDATE match (isi pemenang, "tampil hari ini").
+-- Generate / buat ulang bracket (insert + delete) cuma superadmin.
+create policy "admin update matches"      on matches for update to authenticated using (is_admin()) with check (is_admin());
+create policy "superadmin insert matches" on matches for insert to authenticated with check (is_superadmin());
+create policy "superadmin delete matches" on matches for delete to authenticated using (is_superadmin());
+
+-- House cut per match cuma boleh diubah superadmin.
+-- (auth.uid() kosong = SQL Editor / server, tetap boleh.)
+create or replace function guard_house_cut() returns trigger
+language plpgsql set search_path = public as $$
+begin
+  if new.house_cut is distinct from old.house_cut and auth.uid() is not null and not is_superadmin() then
+    raise exception 'Cuma superadmin yang boleh ubah house cut.';
+  end if;
+  return new;
+end $$;
+drop trigger if exists matches_guard_house_cut on matches;
+create trigger matches_guard_house_cut before update on matches
+  for each row execute function guard_house_cut();
 -- bets TIDAK bisa dibaca publik (nama bettor & nominal per orang tetap rahasia)
 create policy "admin all bets"           on bets     for all to authenticated using (is_admin()) with check (is_admin());
 

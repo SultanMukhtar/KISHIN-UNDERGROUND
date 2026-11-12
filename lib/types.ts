@@ -36,6 +36,7 @@ export type Bet = {
   id: string;
   match_id: string;
   bettor_name: string;
+  bettor_account: string | null; // rekening / Yentag
   fighter_id: string;
   amount: number;
   paid_out: boolean;
