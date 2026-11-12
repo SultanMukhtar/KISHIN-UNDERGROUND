@@ -108,7 +108,7 @@ export default function BettingTab({ me, data, reload, notify }: TabProps) {
     <>
       <div className="stats">
         <div className="stat"><div className="k">Total uang taruhan</div><div className="v mono">{yen(totalBet)}</div></div>
-        {isSuper && <div className="stat"><div className="k">Untung kas 1C</div><div className="v mono" style={{ color: "var(--green)" }}>{yen(houseTotal)}</div></div>}
+        {isSuper && <div className="stat"><div className="k">Untung kas</div><div className="v mono" style={{ color: "var(--green)" }}>{yen(houseTotal)}</div></div>}
         <div className="stat"><div className="k">Belum dibayar ke bettor</div><div className="v mono" style={{ color: unpaid ? "var(--red)" : undefined }}>{yen(unpaid)}</div></div>
         <div className="stat"><div className="k">Jumlah taruhan</div><div className="v">{bets.length}</div></div>
       </div>
@@ -142,7 +142,7 @@ export default function BettingTab({ me, data, reload, notify }: TabProps) {
                       <input type="number" min={0} max={90} step={1} defaultValue={Math.round(selected.house_cut * 100)} key={selected.id + selected.house_cut}
                         onBlur={(e) => setCut(selected, e.target.value)} style={{ marginTop: 4 }} />
                       <div style={{ fontSize: 12, color: "var(--muted)" }}>dipotong dari uang pihak kalah</div></div>
-                    <div className="stat"><div className="k">Untung 1C match ini</div><div className="v mono">{selected.winner_id ? yen(cur.house) : "-"}</div></div>
+                    <div className="stat"><div className="k">Untung match ini</div><div className="v mono">{selected.winner_id ? yen(cur.house) : "-"}</div></div>
                   </>
                 )}
               </div>

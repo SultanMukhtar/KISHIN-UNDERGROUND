@@ -80,7 +80,7 @@ export default function BracketTab({ me, data, reload, notify }: TabProps) {
             Pakai {paid.length} fighter yang statusnya <strong>Sudah bayar</strong>. Diacak, sisa slot jadi BYE (lolos otomatis), pemenang otomatis maju ke ronde berikutnya, yang kalah di semifinal otomatis masuk Perebutan Juara 3.
           </p>
           <div className="row-actions">
-            <button className="btn" onClick={generate} disabled={busy || paid.length < 2}>{matches.length ? "Buat ulang bracket" : "Generate bracket"}</button>
+            <button className={matches.length ? "btn danger" : "btn"} onClick={generate} disabled={busy || paid.length < 2}>{matches.length ? "Buat ulang bracket" : "Generate bracket"}</button>
           </div>
         </div>
       )}
@@ -94,12 +94,22 @@ export default function BracketTab({ me, data, reload, notify }: TabProps) {
       {groups.length === 0 && (
         <div className="empty-state">{isSuper ? "Belum ada bracket." : "Belum ada bracket. Tunggu superadmin generate bracket."}</div>
       )}
-      {groups.map((g) => (
+      {groups.map((g) => {
+        const byeOf = (m: Match) => m.kind === "main" && m.round === 1 && !!m.fighter1_id && !m.fighter2_id;
+        const byes = g.items.filter(byeOf);
+        const real = g.items.filter((m) => !byeOf(m));
+        return (
         <section key={g.key} style={{ marginTop: 22 }}>
-          <div className="sec-head"><h2>{g.label}</h2><span className="sub">{g.items.filter((m) => m.winner_id).length}/{g.items.length} selesai</span></div>
+          <div className="sec-head"><h2>{g.label}</h2><span className="sub">{real.filter((m) => m.winner_id).length}/{real.length} selesai</span></div>
+          {byes.length > 0 && (
+            <p className="bye-list">
+              <strong>Lolos otomatis (BYE):</strong>{" "}
+              {byes.map((m) => byId.get(m.fighter1_id!)?.name ?? "?").join(", ")}
+            </p>
+          )}
           <div className="match-grid">
-            {g.items.map((m) => {
-              const isBye = m.kind === "main" && m.round === 1 && !m.fighter2_id;
+            {real.map((m) => {
+              const isBye = byeOf(m);
               const ready = m.fighter1_id && m.fighter2_id;
               return (
                 <div className="match-card admin-match" key={m.id} style={m.featured ? { borderColor: "var(--red)", borderWidth: 2 } : undefined}>
@@ -130,7 +140,8 @@ export default function BracketTab({ me, data, reload, notify }: TabProps) {
             })}
           </div>
         </section>
-      ))}
+        );
+      })}
     </>
   );
 }

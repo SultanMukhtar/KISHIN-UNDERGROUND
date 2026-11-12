@@ -23,7 +23,7 @@ export default function SettingsTab({ data, reload, notify }: TabProps) {
     e.preventDefault();
     setBusy(true);
     const { error } = await sb().from("settings").update({
-      event_name: eventName.trim() || "1C UNDERGROUND FIGHT",
+      event_name: eventName.trim() || "UNDERGROUND",
       tagline: tagline.trim(),
       registration_fee: Math.max(parseInt(fee, 10) || 0, 0),
       default_house_cut: Math.min(Math.max(parseFloat(cut) || 0, 0), 90) / 100,

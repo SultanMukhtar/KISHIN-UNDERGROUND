@@ -1,5 +1,5 @@
 -- =========================================================
--- 1C UNDERGROUND FIGHT - SCHEMA SUPABASE
+-- UNDERGROUND - SCHEMA SUPABASE
 -- Jalankan di Supabase > SQL Editor > New query > Run.
 -- Aman di-Run ulang (data gak kehapus) kalau ada versi baru.
 -- =========================================================
@@ -7,8 +7,8 @@
 -- ---------- PENGATURAN (cuma 1 baris) ----------
 create table if not exists settings (
   id int primary key default 1 check (id = 1),
-  event_name text not null default '1C UNDERGROUND FIGHT',
-  tagline text not null default 'Fight club rahasia Class 1-C, Kishin High School. Fist only, sampai KO. Jangan sampai guru tahu.',
+  event_name text not null default 'UNDERGROUND',
+  tagline text not null default 'Fight club rahasia Kishin High School. Tangan kosong, sampai KO. Jangan sampai guru tahu.',
   hero_url text,
   registration_fee int not null default 5000,
   default_house_cut numeric not null default 0.2 check (default_house_cut >= 0 and default_house_cut < 1),

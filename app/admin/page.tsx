@@ -9,6 +9,8 @@ import BracketTab from "@/components/admin/BracketTab";
 import BettingTab from "@/components/admin/BettingTab";
 import SettingsTab from "@/components/admin/SettingsTab";
 import AccountsTab from "@/components/admin/AccountsTab";
+import { BrandMark } from "@/components/site/SiteChrome";
+import Stamp from "@/components/ui/Stamp";
 
 const TABS = [
   { key: "fighters", label: "Pendaftaran", superOnly: false },
@@ -58,18 +60,20 @@ export default function AdminPage() {
   }, [evaluate]);
 
   switch (phase.kind) {
-    case "loading": return <div className="wrap"><div className="empty-state">Memuat…</div></div>;
+    case "loading": return <div className="gate-msg"><p className="empty-state">Ngecek akses…</p></div>;
     case "error": return (
-      <div className="wrap"><div className="notice err">{phase.message}</div>
-        <button className="btn ghost" onClick={() => location.reload()}>Coba lagi</button></div>
+      <div className="gate-msg">
+        <div className="notice err">{phase.message}</div>
+        <button className="btn ghost" onClick={() => location.reload()}>Coba lagi</button>
+      </div>
     );
     case "setup": return <Setup />;
     case "login": return <Login />;
     case "notadmin": return (
-      <div className="wrap"><div className="card login-box">
-        <p>Akun ini bukan admin 1C.</p>
+      <div className="gate-msg">
+        <div className="notice err">Akun ini bukan akun panitia.</div>
         <button className="btn" onClick={() => sb().auth.signOut()}>Keluar</button>
-      </div></div>
+      </div>
     );
     case "ready": return <Dashboard me={phase.me} />;
   }
@@ -104,19 +108,21 @@ function Setup() {
   }
 
   return (
-    <div className="wrap">
-      <form className="card login-box" onSubmit={submit}>
-        <h1 className="display" style={{ fontSize: 32, margin: "0 0 4px" }}>Bikin akun superadmin</h1>
-        <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 0 }}>
-          Cuma muncul sekali. Superadmin bisa ngelola semua operasional, pengaturan, dan akun admin.
-        </p>
-        {err && <div className="notice err">{err}</div>}
-        <label className="f" style={{ marginBottom: 10 }}>Username<input type="text" value={username} onChange={(e) => setUsername(e.target.value)} required autoComplete="username" /></label>
-        <label className="f" style={{ marginBottom: 4 }}>Email kamu<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" /></label>
-        <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 10px" }}>Cuma buat sistem Supabase, gak dipakai login dan gak tampil di website.</p>
-        <label className="f" style={{ marginBottom: 10 }}>Password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} autoComplete="new-password" /></label>
-        <label className="f" style={{ marginBottom: 14 }}>Ulangi password<input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={6} autoComplete="new-password" /></label>
-        <button className="btn" style={{ width: "100%" }} disabled={busy}>{busy ? "Membuat…" : "Bikin akun & masuk"}</button>
+    <div className="gate">
+      <div className="gate-type">
+        <h1>Kunci<br />basement</h1>
+        <p>Halaman ini cuma muncul sekali. Akun pertama jadi superadmin: pegang semua operasional, pengaturan, dan akun panitia lain.</p>
+        <Stamp tone="red" tilt={-5}><span className="jp">地下</span><span>Khusus panitia</span></Stamp>
+      </div>
+      <form className="gate-form" onSubmit={submit}>
+        <h2>Bikin akun superadmin</h2>
+        <p className="hint">Email cuma buat sistem Supabase. Login tetap pakai username.</p>
+        {err && <div className="notice err" role="alert">{err}</div>}
+        <label className="f">Username<input type="text" value={username} onChange={(e) => setUsername(e.target.value)} required autoComplete="username" /></label>
+        <label className="f">Email kamu<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" /></label>
+        <label className="f">Password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} autoComplete="new-password" /></label>
+        <label className="f">Ulangi password<input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={6} autoComplete="new-password" /></label>
+        <button className="btn" disabled={busy}>{busy ? "Membuat akun…" : "Bikin akun & masuk"}</button>
       </form>
     </div>
   );
@@ -141,14 +147,19 @@ function Login() {
   }
 
   return (
-    <div className="wrap">
-      <form className="card login-box" onSubmit={submit}>
-        <h1 className="display" style={{ fontSize: 32, margin: "0 0 4px" }}>Panel Panitia 1C</h1>
-        <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 0 }}>Khusus panitia. Penonton balik ke halaman utama.</p>
-        {err && <div className="notice err">{err}</div>}
-        <label className="f" style={{ marginBottom: 10 }}>Username<input type="text" value={username} onChange={(e) => setUsername(e.target.value)} required autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} /></label>
-        <label className="f" style={{ marginBottom: 14 }}>Password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" /></label>
-        <button className="btn" style={{ width: "100%" }} disabled={busy}>{busy ? "Masuk…" : "Masuk"}</button>
+    <div className="gate">
+      <div className="gate-type">
+        <h1>Khusus<br />panitia</h1>
+        <p>Penonton gak perlu login. Balik ke <a href="/">halaman utama</a> buat lihat bracket dan hasil.</p>
+        <Stamp tone="red" tilt={-5}><span className="jp">地下格闘</span><span>Dilarang masuk</span></Stamp>
+      </div>
+      <form className="gate-form" onSubmit={submit}>
+        <h2>Masuk panel</h2>
+        <p className="hint">Pakai username dan password dari superadmin.</p>
+        {err && <div className="notice err" role="alert">{err}</div>}
+        <label className="f">Username<input type="text" value={username} onChange={(e) => setUsername(e.target.value)} required autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} /></label>
+        <label className="f">Password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" /></label>
+        <button className="btn" disabled={busy}>{busy ? "Masuk…" : "Masuk"}</button>
       </form>
     </div>
   );
@@ -206,31 +217,60 @@ function Dashboard({ me }: { me: Me }) {
 
   const props: TabProps = { me, data, reload, notify };
 
+  const playable = data.matches.filter((m) => !(m.kind === "main" && m.round === 1 && m.fighter1_id && !m.fighter2_id));
+  const counts: Partial<Record<TabKey, string>> = {
+    fighters: String(data.fighters.length),
+    bracket: playable.length ? `${playable.filter((m) => m.winner_id).length}/${playable.length}` : undefined,
+    betting: data.bets.length ? String(data.bets.length) : undefined,
+  };
+  const hints: Record<TabKey, string> = {
+    fighters: "Daftarin fighter, upload fotonya, terus tandai yang udah bayar.",
+    bracket: isSuper
+      ? "Generate bracket sekali setelah pendaftaran ditutup. Klik Menang buat fighter yang KO, centang Tampil hari ini buat match yang lagi dipanggil."
+      : "Klik Menang buat fighter yang KO. Centang Tampil hari ini buat match yang lagi dipanggil ke ring.",
+    betting: "Catat taruhan sebelum fight mulai. Setelah fight selesai, transfer payout lalu tandai Sudah dibayar.",
+    settings: "Foto hero, nama event, tagline, biaya daftar, dan house cut default.",
+    accounts: "Tambah, hapus, atau ganti password akun panitia.",
+  };
+  const current = tabs.find((t) => t.key === tab) ?? tabs[0];
+
   return (
-    <div className="wrap">
-      <div className="admin-top">
-        <div>
-          <h1>Panel Panitia 1C</h1>
-          <div style={{ fontSize: 13, color: "var(--muted)" }}>
-            Masuk sebagai <strong style={{ color: "var(--ink)" }}>{me.username}</strong> · {isSuper ? "Superadmin" : "Admin"}
-          </div>
+    <div className="admin">
+      <aside className="admin-side">
+        <a className="admin-brand" href="/" target="_blank" rel="noreferrer" aria-label="Buka halaman penonton">
+          <BrandMark />
+          <span><span className="nav-name">Panel panitia</span><small>Underground</small></span>
+        </a>
+        <div className="admin-who">
+          <b>{me.username}</b>
+          <span className={`role-${me.role}`}>{isSuper ? "Superadmin" : "Admin"}</span>
         </div>
-        <div className="row-actions">
-          <a className="btn ghost" href="/" target="_blank" rel="noreferrer">Lihat halaman penonton</a>
-          <button className="btn ghost" onClick={() => sb().auth.signOut()}>Keluar</button>
+        <nav className="admin-tabs" aria-label="Menu panel">
+          {tabs.map((t) => (
+            <button key={t.key} className={"admin-tab" + (tab === t.key ? " is-on" : "")} aria-current={tab === t.key ? "page" : undefined} onClick={() => setTab(t.key)}>
+              {t.label}
+              {counts[t.key] && <small>{counts[t.key]}</small>}
+            </button>
+          ))}
+        </nav>
+        <div className="admin-side-foot">
+          <a className="btn ghost sm" href="/" target="_blank" rel="noreferrer">Halaman penonton</a>
+          <button className="btn ghost sm" onClick={() => sb().auth.signOut()}>Keluar</button>
         </div>
-      </div>
-      <div className="tabs">
-        {tabs.map((t) => (
-          <button key={t.key} className={"tab" + (tab === t.key ? " active" : "")} onClick={() => setTab(t.key)}>{t.label}</button>
-        ))}
-      </div>
-      {msg && <div className={"notice" + (msg.err ? " err" : "")} role="status">{msg.text}</div>}
-      {tab === "fighters" && <FightersTab {...props} />}
-      {tab === "bracket" && <BracketTab {...props} />}
-      {tab === "betting" && <BettingTab {...props} />}
-      {tab === "settings" && isSuper && <SettingsTab {...props} />}
-      {tab === "accounts" && isSuper && <AccountsTab {...props} />}
+      </aside>
+
+      <main className="admin-main">
+        <header className="admin-head">
+          <h1>{current.label}</h1>
+          <p>{hints[current.key]}</p>
+        </header>
+        {msg && <div className={"notice" + (msg.err ? " err" : "")} role="status">{msg.text}</div>}
+        {tab === "fighters" && <FightersTab {...props} />}
+        {tab === "bracket" && <BracketTab {...props} />}
+        {tab === "betting" && <BettingTab {...props} />}
+        {tab === "settings" && isSuper && <SettingsTab {...props} />}
+        {tab === "accounts" && isSuper && <AccountsTab {...props} />}
+      </main>
     </div>
   );
 }

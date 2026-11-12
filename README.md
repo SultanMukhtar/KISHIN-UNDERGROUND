@@ -1,6 +1,6 @@
-# 1C Underground Fight — Website + Panel Panitia
+# Underground — Website + Panel Panitia
 
-Website live buat event underground fight Class 1-C (Kishin High School).
+Website live buat event underground fight di Kishin High School (Roblox RP).
 
 - **`/`** → halaman penonton: poster "Pertandingan Hari Ini", podium juara, bracket per ronde, odds taruhan. Update otomatis tanpa refresh.
 - **`/admin`** → panel panitia (login username + password): pendaftaran + upload foto, generate bracket otomatis, catat taruhan & payout, pengaturan event, kelola akun admin.
@@ -55,7 +55,7 @@ Setelah itu form ini hilang selamanya dan `/admin` jadi halaman login biasa (**u
 |---|---|---|
 | Pendaftaran, isi pemenang, "Tampil hari ini", catat taruhan | ✓ | ✓ |
 | Generate / buat ulang bracket | ✓ | – |
-| Ubah house cut per match, lihat untung kas 1C | ✓ | – |
+| Ubah house cut per match, lihat untung kas | ✓ | – |
 | Pengaturan (hero, biaya daftar, house cut default) | ✓ | – |
 | Akun Admin: tambah, hapus, ganti password | ✓ | – |
 
@@ -89,12 +89,19 @@ Catatan:
 - Kalau pendaftaran gagal (misal nama dobel), foto yang terlanjur ke-upload langsung dibuang.
 - Jaga-jaga (superadmin): `/admin` → Pengaturan → **Cari & hapus foto nganggur** buat bersihin file yang gak dipakai siapa pun.
 
+## Tampilan
+
+- **Font**: Archivo (judul raksasa & teks), Big Shoulders Stencil (nomor fight & kode ID), Dela Gothic One buat kanji (cuma karakter yang dipakai, 4 KB, file `public/fonts/kanji.woff2`, lisensi OFL ada di `public/fonts`). Semua di-host sendiri, gak ngambil dari Google Fonts.
+- **Tekstur** beton, karat, goresan, pagar kawat, rantai, kertas, dan grain: SVG buatan sendiri di `public/tex`.
+- **Foto fighter** otomatis jadi hitam-putih kontras tinggi + raster halftone, jadi foto Roblox yang warna-warni tetap nyatu sama gaya fotokopian.
+- Fighter yang belum punya foto tampil sebagai siluet, jadi gak ada kotak kosong.
+
 ## Sistem taruhan
 
 - Yang menang: **modal balik utuh + bagian dari uang pihak yang kalah**, dibagi sesuai besar taruhan.
 - **House cut** (default 20%, bisa diubah per match oleh superadmin) cuma dipotong dari uang pihak yang kalah.
-- Kalau gak ada yang taruh ke fighter yang menang, seluruh uang pihak kalah masuk kas 1C.
-- Pecahan Yen dibulatkan ke bawah ke bettor; sisanya masuk kas 1C.
+- Kalau gak ada yang taruh ke fighter yang menang, seluruh uang pihak kalah masuk kas panitia.
+- Pecahan Yen dibulatkan ke bawah ke bettor; sisanya masuk kas panitia.
 
 ## Jalankan di komputer sendiri (opsional)
 

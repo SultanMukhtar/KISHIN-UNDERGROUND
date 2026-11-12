@@ -1,7 +1,7 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-title 1C Underground Fight - Server Lokal
+title Underground - Server Lokal
 
 where node >nul 2>nul
 if errorlevel 1 goto nonode
@@ -48,7 +48,9 @@ if "%SB_SECRET%"=="" goto nokey
 echo Secret key ditambahkan ke %ENVF%
 
 :install
-if exist "node_modules\next" goto run
+if not exist "node_modules\next" goto doinstall
+if exist "node_modules\@fontsource-variable\archivo" goto run
+:doinstall
 echo Install paket dulu, sekali aja, kira-kira 1-2 menit...
 call npm install
 if errorlevel 1 goto failinstall
