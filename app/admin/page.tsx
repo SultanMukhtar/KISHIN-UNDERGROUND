@@ -174,7 +174,30 @@ function Dashboard({ me }: { me: Me }) {
     setData({ settings: s.data, fighters: f.data ?? [], matches: m.data ?? [], bets: b.data ?? [] });
   }, []);
 
-  useEffect(() => { reload(); }, [reload]);
+  // Data dari admin lain ikut muncul tanpa refresh:
+  // realtime buat matches & bets, plus polling tiap 10 detik + saat tab dibuka lagi (buat fighters dll).
+  useEffect(() => {
+    reload();
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const soon = () => { if (timer) clearTimeout(timer); timer = setTimeout(reload, 300); };
+    const onVisible = () => { if (document.visibilityState === "visible") reload(); };
+    const poll = setInterval(() => { if (document.visibilityState === "visible") reload(); }, 10000);
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    const c = sb();
+    const channel = c
+      .channel("admin-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "matches" }, soon)
+      .on("postgres_changes", { event: "*", schema: "public", table: "bets" }, soon)
+      .subscribe();
+    return () => {
+      if (timer) clearTimeout(timer);
+      clearInterval(poll);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+      c.removeChannel(channel);
+    };
+  }, [reload]);
 
   const notify = useCallback((text: string, err?: boolean) => {
     setMsg({ text, err });

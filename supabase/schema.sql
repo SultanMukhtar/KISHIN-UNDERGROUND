@@ -167,6 +167,9 @@ do $$
 begin
   begin alter publication supabase_realtime add table matches;  exception when duplicate_object then null; end;
   begin alter publication supabase_realtime add table settings; exception when duplicate_object then null; end;
+  -- bets: cuma admin yang nerima (RLS), panel admin lain langsung update.
+  -- fighters sengaja TIDAK dimasukkan (kolom bayar/fee/catatan rahasia); panel admin polling tiap 10 detik.
+  begin alter publication supabase_realtime add table bets;     exception when duplicate_object then null; end;
 end $$;
 
 -- =========================================================
