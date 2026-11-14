@@ -1,6 +1,7 @@
 import FitLines, { narrowTitle, splitTitle } from "@/components/ui/FitLines";
 import Stamp from "@/components/ui/Stamp";
 import Mugshot from "@/components/ui/Mugshot";
+import CountUp from "@/components/ui/CountUp";
 import { tornClip } from "@/lib/codes";
 import { yen } from "@/lib/betting";
 
@@ -8,18 +9,18 @@ type Props = {
   eventName: string;
   tagline?: string | null;
   heroUrl?: string | null;
-  fighters: number;
-  done: number;
-  total: number;
-  pool: number;
+  /** null = data belum masuk (tampil "–", bukan angka palsu) */
+  stats: { fighters: number; done: number; total: number; live: number; pool: number } | null;
 };
 
-export default function Hero({ eventName, tagline, heroUrl, fighters, done, total, pool }: Props) {
+export default function Hero({ eventName, tagline, heroUrl, stats }: Props) {
   const lines = splitTitle(eventName);
   return (
     <header className="hero" id="top">
       <div className="hero-wall" aria-hidden="true" />
       <div className="hero-fence" aria-hidden="true" />
+      <div className="hero-smoke" aria-hidden="true" />
+      <div className="hero-smoke is-b" aria-hidden="true" />
       <Lamp />
       <div className="hero-beam" aria-hidden="true" />
 
@@ -45,6 +46,7 @@ export default function Hero({ eventName, tagline, heroUrl, fighters, done, tota
               <li>Selesai kalau ada yang KO</li>
               <li>Keputusan wasit final</li>
             </ol>
+            <a className="flyer-more" href="#aturan">Baca semua aturan</a>
           </div>
         </aside>
 
@@ -53,9 +55,25 @@ export default function Hero({ eventName, tagline, heroUrl, fighters, done, tota
         {tagline && <p className="hero-tag">{tagline}</p>}
 
         <dl className="hero-tally">
-          <div><dt>Fighter</dt><dd>{fighters}</dd></div>
-          <div><dt>Fight selesai</dt><dd>{done}<small>/{total || "–"}</small></dd></div>
-          <div><dt>Di meja taruhan</dt><dd>{yen(pool)}</dd></div>
+          <div>
+            <dt>Fighter</dt>
+            <dd>{stats ? <CountUp value={stats.fighters} /> : "–"}</dd>
+          </div>
+          <div>
+            <dt>Fight selesai</dt>
+            <dd>
+              {stats ? <CountUp value={stats.done} /> : "–"}
+              <small>/{stats?.total || "–"}</small>
+            </dd>
+          </div>
+          <div className={stats?.live ? "is-live" : undefined}>
+            <dt>Lagi di ring</dt>
+            <dd>{stats ? <CountUp value={stats.live} /> : "–"}</dd>
+          </div>
+          <div>
+            <dt>Total taruhan, mata uang RP</dt>
+            <dd>{stats ? <CountUp value={stats.pool} format={yen} duration={1200} /> : "–"}</dd>
+          </div>
         </dl>
       </div>
     </header>

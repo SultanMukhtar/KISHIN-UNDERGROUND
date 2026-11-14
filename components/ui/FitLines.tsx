@@ -4,6 +4,7 @@ import { useLayoutEffect, useRef } from "react";
 /**
  * Tiap baris teks digedein sampai pas selebar wadah (gaya poster brutalist).
  * `max` = batas ukuran font (px) biar kata pendek gak jadi segede gedung.
+ * Tiap baris dapat --i (urutan) dan wadahnya --n (jumlah baris), dipakai CSS buat masuk berurutan.
  */
 export default function FitLines({ lines, max = 300, className = "" }: { lines: string[]; max?: number; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -29,14 +30,14 @@ export default function FitLines({ lines, max = 300, className = "" }: { lines: 
   }, [key, max]);
 
   return (
-    <div ref={ref} className={className} aria-hidden="true">
+    <div ref={ref} className={className} aria-hidden="true" style={{ "--n": lines.length } as React.CSSProperties}>
       {lines.map((l, i) => (
         <span
           key={i}
           data-fit
           className="fit-line"
           // tebakan awal sebelum JS ngukur, biar gak lompat jauh
-          style={{ fontSize: `min(${max}px, ${(88 / Math.max(l.length, 1) / 0.5).toFixed(2)}vw)` }}
+          style={{ fontSize: `min(${max}px, ${(88 / Math.max(l.length, 1) / 0.5).toFixed(2)}vw)`, "--i": i } as React.CSSProperties}
         >
           {l}
         </span>

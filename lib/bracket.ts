@@ -15,12 +15,37 @@ export function totalRounds(matches: Pick<Match, "kind" | "round">[]): number {
   return matches.filter((m) => m.kind === "main").reduce((max, m) => Math.max(max, m.round), 0);
 }
 
+/** Kunci babak yang stabil (sama persis dengan stage_key() di schema.sql). */
+export function stageKey(round: number, total: number, kind: Match["kind"] = "main"): string {
+  if (kind === "third") return "third";
+  if (kind === "extra") return "extra";
+  if (round === total) return "final";
+  if (round === total - 1) return "semifinal";
+  if (round === total - 2) return "quarterfinal";
+  return `round-${round}`;
+}
+
+export function stageLabel(key: string | null | undefined): string {
+  switch (key) {
+    case "final": return "Final";
+    case "third": return "Perebutan Juara 3";
+    case "semifinal": return "Semifinal";
+    case "quarterfinal": return "Perempat Final";
+    case "extra": return "Laga Tambahan";
+    case "registration": return "Pendaftaran";
+    case "completed": return "Selesai";
+    default: return key && key.startsWith("round-") ? `Ronde ${key.slice(6)}` : "–";
+  }
+}
+
+/** Urutan babak buat pilihan filter: ronde awal dulu, final paling akhir. */
+export function stageOrder(key: string): number {
+  if (key.startsWith("round-")) return parseInt(key.slice(6), 10) || 0;
+  return { quarterfinal: 100, semifinal: 101, third: 102, final: 103, extra: 104 }[key] ?? 105;
+}
+
 export function roundLabel(round: number, total: number, kind: Match["kind"] = "main"): string {
-  if (kind === "third") return "Perebutan Juara 3";
-  if (round === total) return "Final";
-  if (round === total - 1) return "Semifinal";
-  if (round === total - 2) return "Perempat Final";
-  return `Ronde ${round}`;
+  return stageLabel(stageKey(round, total, kind));
 }
 
 /**
@@ -29,7 +54,7 @@ export function roundLabel(round: number, total: number, kind: Match["kind"] = "
  * - Kalau jumlahnya bukan 2,4,8,16,32,64, sebagian fighter dapat BYE (langsung lolos ronde 1), disebar merata.
  * - Ada match Perebutan Juara 3 kalau peserta >= 4.
  */
-export function generateBracket(fighterIds: string[], houseCut: number): NewMatch[] {
+export function generateBracket(fighterIds: string[], houseCut: number, tournamentId?: string | null): NewMatch[] {
   if (fighterIds.length < 2) throw new Error("Minimal 2 fighter yang sudah bayar buat bikin bracket.");
   const ids = shuffle(fighterIds);
   let size = 2;
@@ -42,7 +67,10 @@ export function generateBracket(fighterIds: string[], houseCut: number): NewMatc
   for (let i = 0; i < byes; i++) byeSlots.add(Math.floor((i * firstRoundMatches) / byes));
 
   const matches: NewMatch[] = [];
-  const base = { winner_id: null, featured: false, house_cut: houseCut };
+  const base = {
+    winner_id: null, featured: false, house_cut: houseCut,
+    ...(tournamentId ? { tournament_id: tournamentId } : {}), // database lama belum punya kolom ini
+  };
   let idx = 0;
 
   for (let s = 0; s < firstRoundMatches; s++) {
@@ -86,8 +114,13 @@ export type MatchPatch = { id: string; changes: Partial<Match> };
  * Hitung perubahan yang harus disimpan saat pemenang sebuah match diisi/diganti/dihapus:
  * pemenang maju ke match ronde berikutnya, yang kalah di semifinal masuk Perebutan Juara 3.
  */
-export function winnerPatches(all: Match[], match: Match, winnerId: string | null): MatchPatch[] {
-  const patches: MatchPatch[] = [{ id: match.id, changes: { winner_id: winnerId } }];
+export function winnerPatches(
+  all: Match[],
+  match: Match,
+  winnerId: string | null,
+  result?: Pick<Match, "result_method" | "duration_sec">,
+): MatchPatch[] {
+  const patches: MatchPatch[] = [{ id: match.id, changes: { winner_id: winnerId, ...(winnerId && result ? result : {}) } }];
   if (match.kind !== "main") return patches;
   const total = totalRounds(all);
   const field = match.slot % 2 === 0 ? "fighter1_id" : "fighter2_id";

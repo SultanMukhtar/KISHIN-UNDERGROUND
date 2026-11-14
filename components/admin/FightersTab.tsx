@@ -1,24 +1,41 @@
 "use client";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Avatar from "@/components/Avatar";
 import { deletePhoto, sb, uploadPhoto } from "@/lib/supabase";
 import { yen } from "@/lib/betting";
+import { fighterCode } from "@/lib/codes";
+import { FIGHTER_STATE_LABEL, buildRecords, fighterStateOf, fighterStats } from "@/lib/fight";
 import type { TabProps } from "@/lib/adminTypes";
-import type { Fighter } from "@/lib/types";
+import type { Fighter, FighterFlag } from "@/lib/types";
+
+const FLAGS: { value: FighterFlag; label: string }[] = [
+  { value: "active", label: "Aktif" },
+  { value: "injured", label: "Cedera" },
+  { value: "suspended", label: "Diskors" },
+  { value: "retired", label: "Pensiun" },
+];
 
 export default function FightersTab({ data, reload, notify }: TabProps) {
   const fee = data.settings?.registration_fee ?? 0;
+  const ready = data.schemaReady;
   const [name, setName] = useState("");
   const [group, setGroup] = useState("");
+  const [style, setStyle] = useState("");
   const [paid, setPaid] = useState(true);
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [q, setQ] = useState("");
+  const [editing, setEditing] = useState<Fighter | null>(null);
 
   const fighters = data.fighters;
   const paidList = fighters.filter((f) => f.paid);
   const income = paidList.reduce((s, f) => s + (f.fee ?? 0), 0);
   const shown = fighters.filter((f) => f.name.toLowerCase().includes(q.toLowerCase()));
+  const byId = useMemo(() => new Map(fighters.map((f) => [f.id, f])), [fighters]);
+  const records = useMemo(
+    () => buildRecords(data.history, data.matches, byId, data.tournament?.name ?? null),
+    [data.history, data.matches, byId, data.tournament],
+  );
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
@@ -29,12 +46,13 @@ export default function FightersTab({ data, reload, notify }: TabProps) {
       photo_url = file ? await uploadPhoto(file, "fighters") : null;
       const { error } = await sb().from("fighters").insert({
         name: name.trim(), group_name: group.trim() || null, paid, fee: paid ? fee : 0, photo_url,
+        ...(ready ? { fighting_style: style.trim() || null } : {}),
       });
       if (error) {
         await deletePhoto(photo_url); // pendaftaran gagal → foto yang terlanjur ke-upload dibuang
         throw new Error(error.code === "23505" ? "Nama fighter itu sudah terdaftar." : error.message);
       }
-      setName(""); setGroup(""); setFile(null); setPaid(true);
+      setName(""); setGroup(""); setStyle(""); setFile(null); setPaid(true);
       (e.target as HTMLFormElement).reset();
       notify(`${name.trim()} terdaftar.`);
       await reload();
@@ -100,51 +118,133 @@ export default function FightersTab({ data, reload, notify }: TabProps) {
         <div className="form-grid">
           <label className="f">Nama fighter / username Roblox<input type="text" value={name} onChange={(e) => setName(e.target.value)} required /></label>
           <label className="f">Kelas / grup RP<input type="text" value={group} onChange={(e) => setGroup(e.target.value)} placeholder="opsional" /></label>
+          {ready && (
+            <label className="f">Gaya bertarung<input type="text" value={style} onChange={(e) => setStyle(e.target.value)} placeholder="opsional, misal Boxing" maxLength={40} /></label>
+          )}
           <label className="f">Foto fighter<input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></label>
           <label className="check"><input type="checkbox" checked={paid} onChange={(e) => setPaid(e.target.checked)} /> Sudah bayar {yen(fee)}</label>
           <button className="btn" disabled={busy}>{busy ? "Menyimpan…" : "Daftarkan"}</button>
         </div>
       </form>
 
+      {editing && (
+        <EditForm
+          key={editing.id}
+          fighter={editing}
+          ready={ready}
+          onCancel={() => setEditing(null)}
+          onSave={async (changes) => {
+            const { error } = await sb().from("fighters").update(changes).eq("id", editing.id);
+            if (error) return notify(error.code === "23505" ? "Nama itu sudah dipakai fighter lain." : error.message, true);
+            notify(`Profil ${changes.name ?? editing.name} disimpan.`);
+            setEditing(null);
+            await reload();
+          }}
+        />
+      )}
+
       <div className="card" style={{ padding: 0, border: "none", background: "transparent" }}>
-        <input type="text" placeholder="Cari nama fighter…" value={q} onChange={(e) => setQ(e.target.value)} style={{ marginBottom: 10 }} />
+        <input type="text" placeholder="Cari nama fighter…" value={q} onChange={(e) => setQ(e.target.value)} style={{ marginBottom: 10 }} aria-label="Cari nama fighter" />
         {fighters.length === 0 ? (
           <div className="empty-state">Belum ada fighter yang daftar.</div>
+        ) : shown.length === 0 ? (
+          <div className="empty-state">Gak ada fighter bernama &quot;{q}&quot;.</div>
         ) : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>#</th><th>Fighter</th><th>Kelas / grup</th><th>Bayar</th><th>Fee</th><th>Daftar</th><th>Foto</th><th></th></tr></thead>
+              <thead>
+                <tr><th>#</th><th>Fighter</th><th>Kelas / gaya</th><th>Status</th><th>Menang–kalah</th><th>Bayar</th><th>Fee</th><th>Daftar</th><th></th></tr>
+              </thead>
               <tbody>
-                {shown.map((f) => (
-                  <tr key={f.id}>
-                    <td>{fighters.indexOf(f) + 1}</td>
-                    <td><span className="fighter-id"><Avatar name={f.name} url={f.photo_url} /><strong>{f.name}</strong></span></td>
-                    <td>{f.group_name ?? "-"}</td>
-                    <td>
-                      <button className={"pill " + (f.paid ? "ok" : "no")} title="Klik untuk ubah"
-                        onClick={() => update(f, { paid: !f.paid, fee: !f.paid ? fee : 0 })}>
-                        {f.paid ? "Sudah" : "Belum"}
-                      </button>
-                    </td>
-                    <td className="mono">{yen(f.fee ?? 0)}</td>
-                    <td style={{ whiteSpace: "nowrap" }}>{f.created_at ? new Date(f.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "-"}</td>
-                    <td>
-                      <div className="row-actions" style={{ flexWrap: "nowrap" }}>
-                        <label className="btn ghost sm" style={{ cursor: "pointer" }}>
-                          {f.photo_url ? "Ganti" : "Upload"}
-                          <input type="file" accept="image/*" hidden onChange={(e) => { changePhoto(f, e.target.files?.[0]); e.target.value = ""; }} />
-                        </label>
-                        {f.photo_url && <button className="btn danger sm" onClick={() => removePhoto(f)}>Hapus foto</button>}
-                      </div>
-                    </td>
-                    <td><button className="btn danger sm" onClick={() => remove(f)}>Hapus</button></td>
-                  </tr>
-                ))}
+                {shown.map((f) => {
+                  const st = fighterStats(f.id, records);
+                  return (
+                    <tr key={f.id}>
+                      <td>{fighters.indexOf(f) + 1}</td>
+                      <td>
+                        <span className="fighter-id">
+                          <Avatar name={f.name} url={f.photo_url} />
+                          <span style={{ whiteSpace: "nowrap" }}><strong>{f.name}</strong><br /><span className="mono" style={{ fontSize: 12, color: "var(--muted)" }}>{fighterCode(f.id)}</span></span>
+                        </span>
+                      </td>
+                      <td>{f.group_name ?? "-"}{f.fighting_style && <><br /><span style={{ fontSize: 13, color: "var(--muted)" }}>{f.fighting_style}</span></>}</td>
+                      <td style={{ whiteSpace: "nowrap" }}>{FIGHTER_STATE_LABEL[fighterStateOf(f, data.matches)]}</td>
+                      <td className="mono" style={{ whiteSpace: "nowrap" }}>{st.wins}–{st.losses}</td>
+                      <td>
+                        <button className={"pill " + (f.paid ? "ok" : "no")} title="Klik untuk ubah"
+                          onClick={() => update(f, { paid: !f.paid, fee: !f.paid ? fee : 0 })}>
+                          {f.paid ? "Sudah" : "Belum"}
+                        </button>
+                      </td>
+                      <td className="mono">{yen(f.fee ?? 0)}</td>
+                      <td style={{ whiteSpace: "nowrap" }}>{f.created_at ? new Date(f.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "-"}</td>
+                      <td>
+                        <div className="row-actions" style={{ flexWrap: "nowrap" }}>
+                          <label className="btn ghost sm" style={{ cursor: "pointer" }}>
+                            {f.photo_url ? "Ganti foto" : "Upload foto"}
+                            <input type="file" accept="image/*" hidden onChange={(e) => { changePhoto(f, e.target.files?.[0]); e.target.value = ""; }} />
+                          </label>
+                          {f.photo_url && <button className="btn danger sm" onClick={() => removePhoto(f)}>Hapus foto</button>}
+                          <button className="btn ghost sm" onClick={() => { setEditing(f); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Edit</button>
+                          <button className="btn danger sm" onClick={() => remove(f)}>Hapus</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </div>
     </>
+  );
+}
+
+function EditForm({ fighter, ready, onSave, onCancel }: { fighter: Fighter; ready: boolean; onSave: (c: Partial<Fighter>) => Promise<void>; onCancel: () => void }) {
+  const [name, setName] = useState(fighter.name);
+  const [group, setGroup] = useState(fighter.group_name ?? "");
+  const [style, setStyle] = useState(fighter.fighting_style ?? "");
+  const [status, setStatus] = useState<FighterFlag>(fighter.status ?? "active");
+  const [notes, setNotes] = useState(fighter.notes ?? "");
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setBusy(true);
+    await onSave({
+      name: name.trim(),
+      group_name: group.trim() || null,
+      notes: notes.trim() || null,
+      ...(ready ? { fighting_style: style.trim() || null, status } : {}),
+    });
+    setBusy(false);
+  }
+
+  return (
+    <form className="card is-editing" onSubmit={submit}>
+      <h3>Edit profil {fighter.name}</h3>
+      <div className="form-grid">
+        <label className="f">Nama fighter<input type="text" value={name} onChange={(e) => setName(e.target.value)} required /></label>
+        <label className="f">Kelas / grup RP<input type="text" value={group} onChange={(e) => setGroup(e.target.value)} /></label>
+        {ready && (
+          <>
+            <label className="f">Gaya bertarung<input type="text" value={style} onChange={(e) => setStyle(e.target.value)} maxLength={40} /></label>
+            <label className="f">Status
+              <select value={status} onChange={(e) => setStatus(e.target.value as FighterFlag)}>
+                {FLAGS.map((x) => <option key={x.value} value={x.value}>{x.label}</option>)}
+              </select>
+            </label>
+          </>
+        )}
+      </div>
+      <label className="f" style={{ marginTop: 10 }}>Catatan panitia (gak tampil ke penonton)<textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} /></label>
+      {ready && <p style={{ fontSize: 12, color: "var(--muted)" }}>Status Gugur dan Juara dihitung otomatis dari hasil fight. Yang diatur di sini cuma cedera, skors, dan pensiun.</p>}
+      <div className="row-actions" style={{ marginTop: 10 }}>
+        <button className="btn" disabled={busy}>{busy ? "Menyimpan…" : "Simpan profil"}</button>
+        <button type="button" className="btn ghost" onClick={onCancel} disabled={busy}>Batal</button>
+      </div>
+    </form>
   );
 }

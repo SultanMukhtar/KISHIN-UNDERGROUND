@@ -1,11 +1,12 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { projectUrl } from "./supabaseUrl";
 
 let client: SupabaseClient | null = null;
 
 /** Dibuat saat pertama dipakai (di browser), supaya build di Vercel gak error kalau env belum ada. */
 export function sb(): SupabaseClient {
   if (!client) {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const url = projectUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     if (!url || !key) {
       throw new Error("NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY belum diisi di file .env / Environment Variables.");

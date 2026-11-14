@@ -1,5 +1,6 @@
 // HANYA dipakai di app/api/* (server). Jangan di-import dari komponen "use client".
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { projectUrl } from "./supabaseUrl";
 
 export type Role = "admin" | "superadmin";
 export type Account = { user_id: string; username: string; email: string; role: Role; created_at: string };
@@ -9,7 +10,7 @@ export class ApiError extends Error {
 }
 
 function env() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const url = projectUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const secret = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !anon) throw new ApiError(500, "NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY belum diisi.");

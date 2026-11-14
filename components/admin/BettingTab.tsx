@@ -1,84 +1,81 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { BetChip } from "@/components/ui/Chips";
 import { sb } from "@/lib/supabase";
-import { multiplier, payout, yen } from "@/lib/betting";
+import { MAX_BET, multiplier, parseAmount, settleMatch, slipCode, yen } from "@/lib/betting";
 import { roundLabel, totalRounds } from "@/lib/bracket";
+import { bettingNote, bettingStateOf, fmtWhen, isReady, matchCode, statusOf } from "@/lib/fight";
+import { placeBet } from "@/lib/staff";
 import type { TabProps } from "@/lib/adminTypes";
-import type { Bet, Match } from "@/lib/types";
+import type { Bet, BetLog, Match } from "@/lib/types";
 
-type MatchCalc = {
-  m: Match; bets: Bet[]; pool1: number; pool2: number;
-  results: Map<string, { status: "Menang" | "Kalah" | "Menunggu" | "Batal"; payout: number }>;
-  house: number; paidOutTotal: number;
+const ACTION_LABEL: Record<BetLog["action"], string> = {
+  placed: "Dicatat",
+  edited: "Diubah",
+  paid: "Dibayar",
+  unpaid: "Batal bayar",
+  voided: "Dihapus",
 };
 
-function calc(m: Match, bets: Bet[]): MatchCalc {
-  const pool1 = bets.filter((b) => b.fighter_id === m.fighter1_id).reduce((s, b) => s + b.amount, 0);
-  const pool2 = bets.filter((b) => b.fighter_id === m.fighter2_id).reduce((s, b) => s + b.amount, 0);
-  const results: MatchCalc["results"] = new Map();
-  let house = 0;
-  let paidOutTotal = 0;
-  if (!m.winner_id) {
-    bets.forEach((b) => results.set(b.id, { status: "Menunggu", payout: 0 }));
-  } else {
-    const winPool = m.winner_id === m.fighter1_id ? pool1 : pool2;
-    const losePool = m.winner_id === m.fighter1_id ? pool2 : pool1;
-    for (const b of bets) {
-      if (b.fighter_id !== m.fighter1_id && b.fighter_id !== m.fighter2_id) {
-        results.set(b.id, { status: "Batal", payout: b.amount }); // fighter-nya udah gak di match ini, refund
-        paidOutTotal += b.amount;
-      } else if (b.fighter_id === m.winner_id) {
-        const p = payout(b.amount, winPool, losePool, m.house_cut);
-        results.set(b.id, { status: "Menang", payout: p });
-        paidOutTotal += p;
-      } else {
-        results.set(b.id, { status: "Kalah", payout: 0 });
-      }
-    }
-    const totalIn = bets.reduce((s, b) => s + b.amount, 0);
-    house = totalIn - paidOutTotal; // termasuk sisa pembulatan
-  }
-  return { m, bets, pool1, pool2, results, house, paidOutTotal };
-}
-
 export default function BettingTab({ me, data, reload, notify }: TabProps) {
-  const { matches, fighters, bets } = data;
+  const { matches, fighters, bets, betLog, schemaReady } = data;
   const isSuper = me.role === "superadmin";
   const byId = useMemo(() => new Map(fighters.map((f) => [f.id, f])), [fighters]);
   const total = totalRounds(matches);
-  const open = matches.filter((m) => m.fighter1_id && m.fighter2_id);
-  const firstOpen = open.find((m) => !m.winner_id) ?? open[0];
+  const open = matches.filter(isReady);
   const [matchId, setMatchId] = useState<string | null>(null);
-  const selected = open.find((m) => m.id === (matchId ?? firstOpen?.id));
 
   const [bettor, setBettor] = useState("");
   const [account, setAccount] = useState("");
   const [pick, setPick] = useState<string>("");
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
+  // id taruhan dibuat sekali per isian form: kirim ulang isian yang sama gak bakal kecatat dobel
+  const draftId = useRef<string | null>(null);
 
-  const allCalcs = useMemo(() => matches.map((m) => calc(m, bets.filter((b) => b.match_id === m.id))), [matches, bets]);
+  const allCalcs = useMemo(() => matches.map((m) => settleMatch(m, bets.filter((b) => b.match_id === m.id))), [matches, bets]);
   const totalBet = bets.reduce((s, b) => s + b.amount, 0);
   const houseTotal = allCalcs.reduce((s, c) => s + c.house, 0);
-  const unpaid = allCalcs.reduce((s, c) => s + c.bets.filter((b) => !b.paid_out && (c.results.get(b.id)?.payout ?? 0) > 0).reduce((x, b) => x + (c.results.get(b.id)!.payout), 0), 0);
+  const unpaid = allCalcs.reduce((s, c) => s + c.bets.filter((b) => !b.paid_out).reduce((x, b) => x + (c.results.get(b.id)?.payout ?? 0), 0), 0);
 
+  const owes = (id: string) => {
+    const c = allCalcs.find((x) => x.m.id === id);
+    return !!c && c.bets.some((b) => !b.paid_out && (c.results.get(b.id)?.payout ?? 0) > 0);
+  };
+  const firstOpen =
+    open.find((m) => bettingStateOf(m) === "open") ?? open.find((m) => owes(m.id)) ?? open.find((m) => !m.winner_id) ?? open[0];
+  const selected = open.find((m) => m.id === (matchId ?? firstOpen?.id));
   const cur = selected ? allCalcs.find((c) => c.m.id === selected.id)! : null;
   const name = (id: string | null) => (id ? byId.get(id)?.name ?? "?" : "-");
+  const state = selected ? bettingStateOf(selected) : "closed";
+  const log = selected ? betLog.filter((l) => l.match_id === selected.id) : [];
+
+  const resetDraft = () => { draftId.current = null; };
 
   async function addBet(e: React.FormEvent) {
     e.preventDefault();
-    if (!selected) return;
-    const amt = parseInt(amount.replace(/\D/g, ""), 10);
-    if (!bettor.trim() || !pick || !amt) return notify("Isi nama bettor, jagoan, dan nominal.", true);
+    if (!selected || busy) return;
+    const amt = parseAmount(amount);
+    if (!bettor.trim() || !pick) return notify("Isi nama bettor dan pilih jagoannya.", true);
+    if (amt === null) return notify("Nominal harus angka lebih dari 0, tanpa koma. Contoh: 25000.", true);
+    if (amt > MAX_BET) return notify(`Nominal maksimal ${yen(MAX_BET)} per taruhan.`, true);
     setBusy(true);
-    const { error } = await sb().from("bets").insert({
-      match_id: selected.id, bettor_name: bettor.trim(), bettor_account: account.trim() || null, fighter_id: pick, amount: amt,
-    });
-    if (error) notify(error.message, true);
-    else {
-      notify(`Taruhan ${bettor.trim()} ${yen(amt)} ke ${name(pick)} dicatat.`);
+    draftId.current ??= crypto.randomUUID();
+    const id = draftId.current;
+    try {
+      const { duplicate } = await placeBet({
+        id, match_id: selected.id, bettor_name: bettor.trim(), bettor_account: account.trim() || null, fighter_id: pick, amount: amt,
+      });
+      notify(
+        duplicate
+          ? `Taruhan itu udah kecatat sebelumnya. Kode slip ${slipCode(id)}.`
+          : `Taruhan ${bettor.trim()} ${yen(amt)} ke ${name(pick)} dicatat. Kode slip ${slipCode(id)}, kasih ke bettor-nya.`,
+      );
       setBettor(""); setAccount(""); setAmount("");
+      resetDraft();
       await reload();
+    } catch (err) {
+      notify((err as Error).message, true);
     }
     setBusy(false);
   }
@@ -90,7 +87,7 @@ export default function BettingTab({ me, data, reload, notify }: TabProps) {
   }
 
   async function removeBet(b: Bet) {
-    if (!confirm(`Hapus taruhan ${b.bettor_name} ${yen(b.amount)}?`)) return;
+    if (!confirm(`Hapus taruhan ${b.bettor_name} ${yen(b.amount)}? Penghapusan tetap tercatat di riwayat transaksi.`)) return;
     const { error } = await sb().from("bets").delete().eq("id", b.id);
     if (error) return notify(error.message, true);
     await reload();
@@ -101,6 +98,13 @@ export default function BettingTab({ me, data, reload, notify }: TabProps) {
     const v = Math.min(Math.max(parseFloat(pct) || 0, 0), 90) / 100;
     const { error } = await sb().from("matches").update({ house_cut: v }).eq("id", m.id);
     if (error) return notify(error.message, true);
+    await reload();
+  }
+
+  async function setClosed(m: Match, closed: boolean) {
+    const { error } = await sb().from("matches").update({ betting_closed: closed }).eq("id", m.id);
+    if (error) return notify(error.message, true);
+    notify(closed ? `Taruhan fight ${matchCode(m.match_no)} ditutup.` : `Taruhan fight ${matchCode(m.match_no)} dibuka lagi.`);
     await reload();
   }
 
@@ -119,14 +123,26 @@ export default function BettingTab({ me, data, reload, notify }: TabProps) {
         <>
           <div className="card">
             <label className="f">Pilih match
-              <select value={selected?.id ?? ""} onChange={(e) => { setMatchId(e.target.value); setPick(""); }}>
+              <select value={selected?.id ?? ""} onChange={(e) => { setMatchId(e.target.value); setPick(""); resetDraft(); }}>
                 {open.map((m) => (
                   <option key={m.id} value={m.id}>
-                    Match {m.match_no} · {roundLabel(m.round, total, m.kind)} — {name(m.fighter1_id)} vs {name(m.fighter2_id)}{m.winner_id ? " (selesai)" : ""}
+                    Match {matchCode(m.match_no)} · {roundLabel(m.round, total, m.kind)} — {name(m.fighter1_id)} vs {name(m.fighter2_id)}
+                    {m.winner_id ? " (selesai)" : statusOf(m) === "live" ? " (live)" : statusOf(m) === "cancelled" ? " (batal)" : ""}
                   </option>
                 ))}
               </select>
             </label>
+            {selected && (
+              <div className="row-actions" style={{ marginTop: 12 }}>
+                <BetChip state={state} />
+                <span style={{ fontSize: 14, color: "var(--muted)" }}>{bettingNote(selected)}</span>
+                {schemaReady && !selected.winner_id && statusOf(selected) !== "live" && statusOf(selected) !== "cancelled" && (
+                  <button className="btn ghost sm" onClick={() => setClosed(selected, !selected.betting_closed)}>
+                    {selected.betting_closed ? "Buka lagi taruhan" : "Tutup taruhan sekarang"}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {selected && cur && (
@@ -140,32 +156,40 @@ export default function BettingTab({ me, data, reload, notify }: TabProps) {
                   <>
                     <div className="stat"><div className="k">House cut (%)</div>
                       <input type="number" min={0} max={90} step={1} defaultValue={Math.round(selected.house_cut * 100)} key={selected.id + selected.house_cut}
-                        onBlur={(e) => setCut(selected, e.target.value)} style={{ marginTop: 4 }} />
+                        onBlur={(e) => setCut(selected, e.target.value)} style={{ marginTop: 4 }} aria-label="House cut dalam persen" />
                       <div style={{ fontSize: 12, color: "var(--muted)" }}>dipotong dari uang pihak kalah</div></div>
                     <div className="stat"><div className="k">Untung match ini</div><div className="v mono">{selected.winner_id ? yen(cur.house) : "-"}</div></div>
                   </>
                 )}
               </div>
 
-              {!selected.winner_id ? (
+              {state === "open" ? (
                 <form className="card" onSubmit={addBet}>
                   <h3>Catat taruhan baru</h3>
                   <div className="form-grid">
-                    <label className="f">Nama bettor<input type="text" value={bettor} onChange={(e) => setBettor(e.target.value)} required /></label>
-                    <label className="f">Rekening / Yentag<input type="text" value={account} onChange={(e) => setAccount(e.target.value)} placeholder="buat transfer kalau menang" maxLength={100} /></label>
+                    <label className="f">Nama bettor<input type="text" value={bettor} onChange={(e) => { setBettor(e.target.value); resetDraft(); }} required maxLength={60} /></label>
+                    <label className="f">Rekening / Yentag<input type="text" value={account} onChange={(e) => { setAccount(e.target.value); resetDraft(); }} placeholder="buat transfer kalau menang" maxLength={100} /></label>
                     <label className="f">Jagoan
-                      <select value={pick} onChange={(e) => setPick(e.target.value)} required>
+                      <select value={pick} onChange={(e) => { setPick(e.target.value); resetDraft(); }} required>
                         <option value="">Pilih…</option>
                         <option value={selected.fighter1_id!}>{name(selected.fighter1_id)}</option>
                         <option value={selected.fighter2_id!}>{name(selected.fighter2_id)}</option>
                       </select>
                     </label>
-                    <label className="f">Nominal (¥)<input type="number" min={1} value={amount} onChange={(e) => setAmount(e.target.value)} required /></label>
-                    <button className="btn" disabled={busy}>Catat</button>
+                    <label className="f">Nominal (¥)<input type="text" inputMode="numeric" value={amount} onChange={(e) => { setAmount(e.target.value); resetDraft(); }} required placeholder="25000" /></label>
+                    <button className="btn" disabled={busy}>{busy ? "Nyatat…" : "Catat taruhan"}</button>
                   </div>
                 </form>
               ) : (
-                <div className="notice">Match selesai — pemenang <strong>{name(selected.winner_id)}</strong>. Taruhan ditutup. Centang &quot;Sudah dibayar&quot; setelah Yen ditransfer ke bettor.</div>
+                <div className="notice">
+                  {selected.winner_id ? (
+                    <>Match selesai — pemenang <strong>{name(selected.winner_id)}</strong>. Taruhan ditutup. Centang &quot;Sudah dibayar&quot; setelah Yen ditransfer ke bettor.</>
+                  ) : statusOf(selected) === "cancelled" ? (
+                    <>Fight dibatalkan. Semua taruhan dikembalikan utuh: transfer balik lalu centang &quot;Sudah dibayar&quot;.</>
+                  ) : (
+                    bettingNote(selected)
+                  )}
+                </div>
               )}
 
               {cur.bets.length === 0 ? (
@@ -173,12 +197,13 @@ export default function BettingTab({ me, data, reload, notify }: TabProps) {
               ) : (
                 <div className="table-wrap">
                   <table>
-                    <thead><tr><th>Bettor</th><th>Rekening / Yentag</th><th>Jagoan</th><th>Taruhan</th><th>Status</th><th>Payout</th><th>Dibayar</th><th></th></tr></thead>
+                    <thead><tr><th>Kode slip</th><th>Bettor</th><th>Rekening / Yentag</th><th>Jagoan</th><th>Taruhan</th><th>Status</th><th>Payout</th><th>Dibayar</th><th></th></tr></thead>
                     <tbody>
                       {cur.bets.map((b) => {
                         const r = cur.results.get(b.id)!;
                         return (
                           <tr key={b.id}>
+                            <td className="mono" style={{ whiteSpace: "nowrap" }}>{slipCode(b.id)}</td>
                             <td><strong>{b.bettor_name}</strong></td>
                             <td className="mono">{b.bettor_account || <span style={{ color: "var(--muted)" }}>-</span>}</td>
                             <td>{name(b.fighter_id)}</td>
@@ -193,6 +218,33 @@ export default function BettingTab({ me, data, reload, notify }: TabProps) {
                     </tbody>
                   </table>
                 </div>
+              )}
+
+              {schemaReady && (
+                <details className="admin-details">
+                  <summary>Riwayat transaksi fight ini ({log.length})</summary>
+                  {log.length === 0 ? (
+                    <div className="empty-state">Belum ada transaksi.</div>
+                  ) : (
+                    <div className="table-wrap">
+                      <table>
+                        <thead><tr><th>Waktu</th><th>Aksi</th><th>Bettor</th><th>Jagoan</th><th>Nominal</th><th>Oleh</th></tr></thead>
+                        <tbody>
+                          {log.map((l) => (
+                            <tr key={l.id}>
+                              <td style={{ whiteSpace: "nowrap" }}>{fmtWhen(l.created_at)}</td>
+                              <td>{ACTION_LABEL[l.action]}</td>
+                              <td>{l.bettor_name}</td>
+                              <td>{l.fighter_name ?? "-"}</td>
+                              <td className="mono">{yen(l.amount)}</td>
+                              <td>{l.actor_name ?? "Sistem"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </details>
               )}
             </>
           )}

@@ -4,9 +4,13 @@ import type { Session } from "@supabase/supabase-js";
 import { sb } from "@/lib/supabase";
 import { api } from "@/lib/api";
 import type { AdminData, Me, TabProps } from "@/lib/adminTypes";
+import { loadAdmin } from "@/lib/data";
+import { isBye } from "@/lib/fight";
 import FightersTab from "@/components/admin/FightersTab";
 import BracketTab from "@/components/admin/BracketTab";
 import BettingTab from "@/components/admin/BettingTab";
+import ArchiveTab from "@/components/admin/ArchiveTab";
+import TournamentTab from "@/components/admin/TournamentTab";
 import SettingsTab from "@/components/admin/SettingsTab";
 import AccountsTab from "@/components/admin/AccountsTab";
 import { BrandMark } from "@/components/site/SiteChrome";
@@ -16,6 +20,8 @@ const TABS = [
   { key: "fighters", label: "Pendaftaran", superOnly: false },
   { key: "bracket", label: "Bracket", superOnly: false },
   { key: "betting", label: "Taruhan", superOnly: false },
+  { key: "archive", label: "Arsip", superOnly: false },
+  { key: "tournament", label: "Turnamen", superOnly: true },
   { key: "settings", label: "Pengaturan", superOnly: true },
   { key: "accounts", label: "Akun Admin", superOnly: true },
 ] as const;
@@ -169,20 +175,17 @@ function Dashboard({ me }: { me: Me }) {
   const isSuper = me.role === "superadmin";
   const tabs = TABS.filter((t) => isSuper || !t.superOnly);
   const [tab, setTab] = useState<TabKey>("fighters");
-  const [data, setData] = useState<AdminData>({ settings: null, fighters: [], matches: [], bets: [] });
+  const [data, setData] = useState<AdminData>({
+    settings: null, fighters: [], matches: [], bets: [], betLog: [], tournaments: [], tournament: null, history: null, schemaReady: true,
+  });
+  const [loaded, setLoaded] = useState(false);
   const [msg, setMsg] = useState<{ text: string; err?: boolean } | null>(null);
 
   const reload = useCallback(async () => {
-    const c = sb();
-    const [s, f, m, b] = await Promise.all([
-      c.from("settings").select("*").eq("id", 1).maybeSingle(),
-      c.from("fighters").select("*").order("created_at"),
-      c.from("matches").select("*").order("match_no"),
-      c.from("bets").select("*").order("created_at"),
-    ]);
-    const err = s.error || f.error || m.error || b.error;
-    if (err) setMsg({ text: "Gagal memuat data: " + err.message, err: true });
-    setData({ settings: s.data, fighters: f.data ?? [], matches: m.data ?? [], bets: b.data ?? [] });
+    const { error, ...d } = await loadAdmin();
+    if (error) setMsg({ text: "Gagal memuat data: " + error, err: true });
+    setData(d);
+    setLoaded(true);
   }, []);
 
   // Data dari admin lain ikut muncul tanpa refresh:
@@ -217,18 +220,21 @@ function Dashboard({ me }: { me: Me }) {
 
   const props: TabProps = { me, data, reload, notify };
 
-  const playable = data.matches.filter((m) => !(m.kind === "main" && m.round === 1 && m.fighter1_id && !m.fighter2_id));
+  const playable = data.matches.filter((m) => !isBye(m));
   const counts: Partial<Record<TabKey, string>> = {
     fighters: String(data.fighters.length),
     bracket: playable.length ? `${playable.filter((m) => m.winner_id).length}/${playable.length}` : undefined,
     betting: data.bets.length ? String(data.bets.length) : undefined,
+    archive: data.history?.length ? String(data.history.length) : undefined,
   };
   const hints: Record<TabKey, string> = {
     fighters: "Daftarin fighter, upload fotonya, terus tandai yang udah bayar.",
     bracket: isSuper
-      ? "Generate bracket sekali setelah pendaftaran ditutup. Klik Menang buat fighter yang KO, centang Tampil hari ini buat match yang lagi dipanggil."
-      : "Klik Menang buat fighter yang KO. Centang Tampil hari ini buat match yang lagi dipanggil ke ring.",
+      ? "Generate bracket sekali setelah pendaftaran ditutup. Tiap fight: atur jadwal, panggil ke ring, mulai, lalu klik Menang buat fighter yang menang."
+      : "Tiap fight: atur jadwal, panggil ke ring, mulai, lalu klik Menang buat fighter yang menang.",
     betting: "Catat taruhan sebelum fight mulai. Setelah fight selesai, transfer payout lalu tandai Sudah dibayar.",
+    archive: "Catatan resmi semua fight yang udah selesai. Keisi sendiri tiap hasil dimasukin.",
+    tournament: "Ganti nama turnamen, tutup turnamen yang jalan, dan mulai yang baru.",
     settings: "Foto hero, nama event, tagline, biaya daftar, dan house cut default.",
     accounts: "Tambah, hapus, atau ganti password akun panitia.",
   };
@@ -264,10 +270,18 @@ function Dashboard({ me }: { me: Me }) {
           <h1>{current.label}</h1>
           <p>{hints[current.key]}</p>
         </header>
+        {loaded && !data.schemaReady && (
+          <div className="notice err" role="alert">
+            <strong>Database belum di-update.</strong> Jadwal &amp; status fight, cara menang, arsip, turnamen, dan riwayat transaksi baru aktif
+            setelah isi <code>supabase/schema.sql</code> di-Run ulang di Supabase &gt; SQL Editor. Data lama aman, gak ada yang kehapus.
+          </div>
+        )}
         {msg && <div className={"notice" + (msg.err ? " err" : "")} role="status">{msg.text}</div>}
         {tab === "fighters" && <FightersTab {...props} />}
         {tab === "bracket" && <BracketTab {...props} />}
         {tab === "betting" && <BettingTab {...props} />}
+        {tab === "archive" && <ArchiveTab {...props} />}
+        {tab === "tournament" && isSuper && <TournamentTab {...props} />}
         {tab === "settings" && isSuper && <SettingsTab {...props} />}
         {tab === "accounts" && isSuper && <AccountsTab {...props} />}
       </main>
