@@ -6,7 +6,7 @@ import { StatusChip } from "@/components/ui/Chips";
 import { useUi } from "@/components/site/Ui";
 import { fighterCode } from "@/lib/codes";
 import { roundLabel, totalRounds } from "@/lib/bracket";
-import { fmtWhen, isBye, isReady, matchCode, statusOf, waitingFor } from "@/lib/fight";
+import { isBye, isReady, matchCode, statusOf, waitingFor } from "@/lib/fight";
 import type { Fighter, Match } from "@/lib/types";
 
 type Props = {
@@ -96,7 +96,6 @@ export default function BracketBoard({ matches, byId, loading, fresh, arrived }:
     };
 
     const names = [m.fighter1_id, m.fighter2_id].map((id) => (id ? byId.get(id)?.name : null) ?? "belum ada").join(" lawan ");
-    const when = st === "upcoming" || st === "postponed" ? fmtWhen(m.scheduled_at) : null;
     const next = onward(m);
     return (
       <button type="button" className={cls} onClick={() => ui.openMatch(m.id)} aria-label={`Fight ${matchCode(m.match_no)}, ${names}. Buka detail.`}>
@@ -110,7 +109,6 @@ export default function BracketBoard({ matches, byId, loading, fresh, arrived }:
           {row(m.fighter2_id, 2)}
         </span>
         {waiting && <span className="bk-wait">{feeders(m)}</span>}
-        {when && <span className="bk-wait">{when}</span>}
         {next && <span className="bk-next">{next}</span>}
       </button>
     );

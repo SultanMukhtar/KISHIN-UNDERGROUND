@@ -6,7 +6,7 @@ Semua fight, taruhan, dan uang di sini fiksi (mata uang RP).
 - **`/`** → halaman penonton, satu halaman panjang:
   layar pembuka → hero + angka live → ticker fight → **Lagi di ring** (poster + fight berikutnya) → **Bracket** (pohon turnamen) → **Meja taruhan** (pool, kelipatan, cek slip) → **Fight history** (arsip) → **Juara** → **Aturan**.
   Update otomatis tanpa refresh.
-- **`/admin`** → panel panitia (login username + password): pendaftaran & profil fighter, bracket, jadwal / status / hasil fight, laga tambahan, taruhan & payout, arsip, turnamen, pengaturan, akun admin.
+- **`/admin`** → panel panitia (login username + password): pendaftaran & profil fighter, bracket, status / hasil fight, laga tambahan, taruhan & payout, arsip, turnamen, pengaturan, akun admin.
 
 Stack: Next.js (hosting di Vercel) + Supabase (database, login, penyimpanan foto). Dua-duanya gratis. Gak ada library animasi tambahan: geraknya CSS + sedikit JavaScript.
 
@@ -14,12 +14,12 @@ Stack: Next.js (hosting di Vercel) + Supabase (database, login, penyimpanan foto
 
 ## Udah pernah setup sebelumnya? Update database dulu
 
-Versi ini nambah tabel dan kolom baru (jadwal & status fight, cara menang, turnamen, arsip, riwayat transaksi).
+Versi ini nambah tabel dan kolom baru (status fight, cara menang, turnamen, arsip, riwayat transaksi).
 
 1. Supabase → **SQL Editor** → **New query** → copy-paste **seluruh** isi `supabase/schema.sql` → **Run**.
 2. Selesai. Data lama aman: fighter, bracket, dan taruhan gak ada yang kehapus. Match yang lagi "Tampil hari ini" otomatis jadi **LIVE**, bracket yang ada masuk ke turnamen pertama (`<nama event> Vol. 1`).
 
-Selama langkah ini belum dijalanin, website tetap jalan kayak versi lama (tanpa jadwal, arsip, dan turnamen), dan panel panitia nampilin peringatan "Database belum di-update".
+Selama langkah ini belum dijalanin, website tetap jalan kayak versi lama (tanpa status fight, arsip, dan turnamen), dan panel panitia nampilin peringatan "Database belum di-update".
 
 ---
 
@@ -70,7 +70,7 @@ Setelah itu form ini hilang selamanya dan `/admin` jadi halaman login biasa (**u
 | | Superadmin (Hito Kassa) | Admin |
 |---|---|---|
 | Pendaftaran, edit profil fighter, upload foto | ✓ | ✓ |
-| Jadwal fight, mulai / tunda / batalkan fight, "Tampil hari ini" | ✓ | ✓ |
+| Mulai / tunda / batalkan fight, "Tampil hari ini" | ✓ | ✓ |
 | Isi hasil resmi (pemenang, cara menang, durasi) | ✓ | ✓ |
 | Catat taruhan, tutup / buka taruhan, tandai payout dibayar | ✓ | ✓ |
 | Lihat arsip fight & riwayat transaksi taruhan | ✓ | ✓ |
@@ -94,7 +94,6 @@ Penonton (tanpa login) cuma bisa **baca**. Semua aturan di atas dijaga database 
 |---|---|---|
 | Daftarin fighter, upload foto, isi gaya bertarung, tandai sudah bayar | Finance Registration | `/admin` → Pendaftaran |
 | Generate bracket (setelah pendaftaran ditutup) | Superadmin | `/admin` → Bracket → **Generate bracket** |
-| Isi jadwal tiap fight (muncul hitung mundur di halaman penonton) | Bracket Coordinator | `/admin` → Bracket → **Jadwal fight** → **Simpan jadwal** |
 | Catat taruhan sebelum fight mulai, kasih **kode slip** ke bettor | Finance Betting | `/admin` → Taruhan (atau klik fight-nya di Meja taruhan halaman penonton) |
 | Panggil fight ke ring (poster) | Bracket Coordinator / MC | `/admin` → Bracket → centang **Tampil hari ini** |
 | **Mulai fight** → status LIVE, taruhan otomatis ditutup | Referee / MC | `/admin` → Bracket → **Mulai fight** |
@@ -151,7 +150,7 @@ Catatan:
 | `settings` | Nama event, tagline, hero, biaya daftar, house cut default, turnamen yang lagi jalan |
 | `fighters` | Nama, kelas, foto, gaya bertarung, status manual (aktif / cedera / skors / pensiun), status bayar |
 | `tournaments` | Nama, status, babak yang lagi jalan, juara 1–3 (diisi otomatis) |
-| `matches` | Posisi di bracket, dua fighter, jadwal, status, pemenang, cara menang, durasi |
+| `matches` | Posisi di bracket, dua fighter, status, pemenang, cara menang, durasi |
 | `fight_history` | Catatan resmi tiap fight yang selesai (diisi otomatis) |
 | `bets` | Taruhan: bettor, jagoan, nominal, status bayar |
 | `bet_log` | Riwayat semua transaksi taruhan (diisi otomatis) |

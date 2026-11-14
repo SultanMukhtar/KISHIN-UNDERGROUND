@@ -2,12 +2,11 @@
 import Mugshot from "@/components/ui/Mugshot";
 import Stamp from "@/components/ui/Stamp";
 import Barcode from "@/components/ui/Barcode";
-import Countdown from "@/components/ui/Countdown";
 import { StatusChip } from "@/components/ui/Chips";
 import { useUi } from "@/components/site/Ui";
 import { fighterCode, tilt, times, tornClip } from "@/lib/codes";
 import { multiplier, yen } from "@/lib/betting";
-import { METHOD_SHORT, fmtClock, fmtWhen, pad3, statusOf } from "@/lib/fight";
+import { METHOD_SHORT, fmtClock, pad3, statusOf } from "@/lib/fight";
 import type { Fighter, Match, Pool } from "@/lib/types";
 
 type Props = { m: Match; f1?: Fighter; f2?: Fighter; pool?: Pool; round: string };
@@ -27,7 +26,6 @@ export default function FightPoster({ m, f1, f2, pool, round }: Props) {
   const longest = Math.max(4, ...[f1?.name, f2?.name].flatMap((n) => (n ?? "TBD").split(/[\s_]+/)).map((w) => w.length));
   // username Roblox kayak Takeshi_Ryuzaki boleh patah di garis bawah, bukan di tengah kata
   const breakable = (n?: string) => (n ? n.replace(/_/g, "_​") : "TBD");
-  const when = fmtWhen(m.scheduled_at);
   const clock = fmtClock(m.duration_sec);
 
   return (
@@ -83,8 +81,8 @@ export default function FightPoster({ m, f1, f2, pool, round }: Props) {
 
       <p className="poster-when">
         {st === "live" && <>Fight lagi jalan.</>}
-        {st === "upcoming" && (when ? <><span>{when}</span><Countdown to={m.scheduled_at} /></> : <>Dipanggil panitia. Jam mulai nyusul.</>)}
-        {st === "postponed" && <>Ditunda.{when ? ` Jadwal baru: ${when}.` : " Jadwal baru nyusul."}</>}
+        {st === "upcoming" && <>Dipanggil panitia. Sebentar lagi naik ring.</>}
+        {st === "postponed" && <>Ditunda panitia.</>}
         {st === "cancelled" && <>Fight ini dibatalkan. Taruhan dikembalikan utuh.</>}
         {done && (
           <>
@@ -125,7 +123,7 @@ export default function FightPoster({ m, f1, f2, pool, round }: Props) {
       {st === "postponed" && (
         <Stamp tone="ink" tilt={5} slam className="poster-stamp" key="postponed">
           <b>Tunda</b>
-          <span>jadwal berubah</span>
+          <span>nanti lanjut</span>
         </Stamp>
       )}
       {st === "cancelled" && (

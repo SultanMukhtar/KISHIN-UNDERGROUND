@@ -7,7 +7,7 @@
 --   settings        pengaturan event (1 baris) + turnamen yang lagi jalan
 --   fighters        fighter + gaya bertarung + status
 --   tournaments     turnamen (yang jalan + arsip) dan podiumnya
---   matches         bracket & laga tambahan: jadwal, status, hasil
+--   matches         bracket & laga tambahan: status, hasil
 --   fight_history   catatan resmi tiap fight yang selesai (diisi otomatis)
 --   bets            taruhan mata uang RP (virtual), cuma panitia
 --   bet_log         riwayat semua transaksi taruhan (diisi otomatis)
@@ -95,7 +95,7 @@ begin
   end if;
 end $$;
 alter table matches add column if not exists tournament_id uuid references tournaments(id) on delete cascade;
-alter table matches add column if not exists scheduled_at timestamptz;      -- jadwal fight
+alter table matches add column if not exists scheduled_at timestamptz;      -- dulu jadwal fight; gak dipakai website lagi, kolomnya dibiarkan
 alter table matches add column if not exists result_method text;            -- cara menang
 alter table matches add column if not exists duration_sec int;              -- lama fight (detik)
 alter table matches add column if not exists completed_at timestamptz;      -- kapan hasil resmi masuk
@@ -193,7 +193,7 @@ group by m.id;
 -- AKUN ADMIN
 -- role 'superadmin' (cuma boleh 1): semua operasional + generate bracket + turnamen + house cut
 --                                   + untung kas + pengaturan + kelola akun admin
--- role 'admin'                     : pendaftaran, jadwal & status fight, hasil resmi, catat taruhan
+-- role 'admin'                     : pendaftaran, status fight, hasil resmi, catat taruhan
 -- Akun dibuat/dihapus lewat panel /admin (server), bukan dari SQL.
 -- =========================================================
 drop function if exists admin_login_email(text);
@@ -610,7 +610,7 @@ create policy "superadmin edit settings" on settings for update to authenticated
 create policy "public read fighters"     on fighters for select to anon, authenticated using (true);
 create policy "admin all fighters"       on fighters for all to authenticated using (is_admin()) with check (is_admin());
 create policy "public read matches"      on matches  for select to anon, authenticated using (true);
--- Admin cuma boleh UPDATE match (jadwal, status, hasil resmi, "tampil hari ini").
+-- Admin cuma boleh UPDATE match (status, hasil resmi, "tampil hari ini").
 -- Bikin / hapus match (generate bracket, laga tambahan) cuma superadmin.
 create policy "admin update matches"      on matches for update to authenticated using (is_admin()) with check (is_admin());
 create policy "superadmin insert matches" on matches for insert to authenticated with check (is_superadmin());

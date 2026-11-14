@@ -252,17 +252,3 @@ export function fmtTime(iso: string | null | undefined): string | null {
   const d = new Date(iso);
   return Number.isNaN(d.getTime()) ? null : TIME.format(d);
 }
-
-/** Buat <input type="datetime-local">: ISO → "2026-11-14T20:30" waktu lokal, dan sebaliknya. */
-export function toLocalInput(iso: string | null | undefined): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
-}
-export function fromLocalInput(v: string): string | null {
-  if (!v) return null;
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? null : d.toISOString();
-}

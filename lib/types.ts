@@ -44,7 +44,6 @@ export type Match = {
   // kolom schema baru (undefined di database lama)
   tournament_id?: string | null;
   status?: MatchStatus;
-  scheduled_at?: string | null;
   result_method?: ResultMethod | null;
   duration_sec?: number | null;
   completed_at?: string | null;

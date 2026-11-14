@@ -1,19 +1,17 @@
 "use client";
 import Mugshot from "@/components/ui/Mugshot";
-import Countdown from "@/components/ui/Countdown";
 import { StatusChip } from "@/components/ui/Chips";
 import { useUi } from "@/components/site/Ui";
 import { fighterCode } from "@/lib/codes";
-import { METHOD_SHORT, fmtWhen, matchCode, statusOf } from "@/lib/fight";
+import { METHOD_SHORT, matchCode, statusOf } from "@/lib/fight";
 import type { Fighter, Match } from "@/lib/types";
 
 type Props = { m: Match; f1?: Fighter; f2?: Fighter; round: string };
 
-/** Kartu fight ringkas (tembok gelap): nomor, babak, dua fighter, status, jadwal. */
+/** Kartu fight ringkas (tembok gelap): nomor, babak, dua fighter, status. */
 export default function FightCard({ m, f1, f2, round }: Props) {
   const ui = useUi();
   const st = statusOf(m);
-  const when = fmtWhen(m.scheduled_at);
 
   const row = (f: Fighter | undefined) => {
     const win = !!m.winner_id && f?.id === m.winner_id;
@@ -46,9 +44,9 @@ export default function FightCard({ m, f1, f2, round }: Props) {
       </ul>
       <footer className="fc-foot">
         <p className="fc-when">
-          {st === "upcoming" && (when ? <><span>{when}</span><Countdown to={m.scheduled_at} /></> : "Jam mulai nyusul")}
+          {st === "upcoming" && "Belum mulai"}
           {st === "live" && "Lagi jalan"}
-          {st === "postponed" && (when ? `Jadwal baru: ${when}` : "Jadwal baru nyusul")}
+          {st === "postponed" && "Ditunda"}
           {st === "cancelled" && "Gak jadi tanding"}
           {st === "completed" && (m.result_method ? `Selesai, ${METHOD_SHORT[m.result_method]}` : "Selesai")}
         </p>

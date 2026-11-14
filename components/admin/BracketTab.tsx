@@ -4,7 +4,7 @@ import Avatar from "@/components/Avatar";
 import { StatusChip } from "@/components/ui/Chips";
 import { sb } from "@/lib/supabase";
 import { generateBracket, roundLabel, totalRounds, winnerPatches } from "@/lib/bracket";
-import { METHODS, METHOD_LABEL, METHOD_SHORT, fmtClock, fromLocalInput, isBye, isReady, matchCode, parseClock, statusOf, toLocalInput } from "@/lib/fight";
+import { METHODS, METHOD_LABEL, METHOD_SHORT, fmtClock, isBye, isReady, matchCode, parseClock, statusOf } from "@/lib/fight";
 import type { TabProps } from "@/lib/adminTypes";
 import type { Fighter, Match, MatchStatus, ResultMethod } from "@/lib/types";
 
@@ -109,7 +109,7 @@ export default function BracketTab({ me, data, reload, notify }: TabProps) {
     setBusy(false);
   }
 
-  async function addExtra(aId: string, bId: string, when: string) {
+  async function addExtra(aId: string, bId: string) {
     if (!aId || !bId || aId === bId) return notify("Pilih dua fighter yang beda.", true);
     setBusy(true);
     const extras = matches.filter((m) => m.kind === "extra");
@@ -118,7 +118,7 @@ export default function BracketTab({ me, data, reload, notify }: TabProps) {
       slot: extras.reduce((n, m) => Math.max(n, m.slot + 1), 0),
       match_no: matches.reduce((n, m) => Math.max(n, m.match_no), 0) + 1,
       fighter1_id: aId, fighter2_id: bId, winner_id: null, featured: false,
-      house_cut: settings?.default_house_cut ?? 0.2, tournament_id: tid, scheduled_at: fromLocalInput(when),
+      house_cut: settings?.default_house_cut ?? 0.2, tournament_id: tid,
     });
     if (error) notify(error.message, true);
     else notify("Laga tambahan dibuat.");
@@ -216,11 +216,9 @@ function MatchCard({ m, byId, busy, isSuper, schemaReady, paid, patch, setWinner
   const done = !!m.winner_id;
   const [method, setMethod] = useState<ResultMethod>(m.result_method ?? "KO");
   const [clock, setClock] = useState(fmtClock(m.duration_sec) ?? "");
-  const [when, setWhen] = useState(toLocalInput(m.scheduled_at));
   const code = matchCode(m.match_no);
 
   // data dari admin lain masuk → form ikut nilai terbaru
-  useEffect(() => { setWhen(toLocalInput(m.scheduled_at)); }, [m.scheduled_at]);
   useEffect(() => {
     setMethod(m.result_method ?? "KO");
     setClock(fmtClock(m.duration_sec) ?? "");
@@ -246,13 +244,6 @@ function MatchCard({ m, byId, busy, isSuper, schemaReady, paid, patch, setWinner
     const d = duration();
     if (d === undefined) return;
     patch(m, { result_method: method, duration_sec: d }, `Detail hasil fight ${code} disimpan.`);
-  }
-
-  const whenDirty = when !== toLocalInput(m.scheduled_at);
-  function saveWhen() {
-    if (!whenDirty) return;
-    const iso = fromLocalInput(when);
-    patch(m, { scheduled_at: iso }, iso ? `Jadwal fight ${code} disimpan.` : `Jadwal fight ${code} dikosongkan.`);
   }
 
   const setStatus = (status: MatchStatus, extra: Partial<Match>, msg: string) => patch(m, { status, ...extra }, msg);
@@ -319,13 +310,6 @@ function MatchCard({ m, byId, busy, isSuper, schemaReady, paid, patch, setWinner
           ) : (
             <>
               {st !== "cancelled" && <p className="am-note">Pilih cara menang dulu, lalu klik Menang di fighter yang menang.</p>}
-              <div className="am-when">
-                <label className="f">
-                  Jadwal fight
-                  <input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} />
-                </label>
-                <button type="button" className="btn ghost sm" disabled={busy || !whenDirty} onClick={saveWhen}>Simpan jadwal</button>
-              </div>
               <div className="row-actions">
                 {(st === "upcoming" || st === "postponed") && (
                   <button className="btn sm" disabled={busy} onClick={() => setStatus("live", { featured: true }, `Fight ${code} mulai. Taruhan ditutup otomatis.`)}>Mulai fight</button>
@@ -337,7 +321,7 @@ function MatchCard({ m, byId, busy, isSuper, schemaReady, paid, patch, setWinner
                   <button className="btn ghost sm" disabled={busy} onClick={() => setStatus("postponed", {}, `Fight ${code} ditunda.`)}>Tunda</button>
                 )}
                 {st === "postponed" && (
-                  <button className="btn ghost sm" disabled={busy} onClick={() => setStatus("upcoming", {}, `Fight ${code} dijadwalkan lagi.`)}>Jadwalkan lagi</button>
+                  <button className="btn ghost sm" disabled={busy} onClick={() => setStatus("upcoming", {}, `Fight ${code} gak jadi ditunda.`)}>Batal tunda</button>
                 )}
                 {st !== "cancelled" ? (
                   <button
@@ -370,17 +354,16 @@ function MatchCard({ m, byId, busy, isSuper, schemaReady, paid, patch, setWinner
   );
 }
 
-function ExtraForm({ fighters, busy, onAdd }: { fighters: Fighter[]; busy: boolean; onAdd: (a: string, b: string, when: string) => Promise<void> }) {
+function ExtraForm({ fighters, busy, onAdd }: { fighters: Fighter[]; busy: boolean; onAdd: (a: string, b: string) => Promise<void> }) {
   const [a, setA] = useState("");
   const [b, setB] = useState("");
-  const [when, setWhen] = useState("");
   return (
     <form
       className="card"
       onSubmit={async (e) => {
         e.preventDefault();
-        await onAdd(a, b, when);
-        setA(""); setB(""); setWhen("");
+        await onAdd(a, b);
+        setA(""); setB("");
       }}
     >
       <h3>Tambah laga tambahan</h3>
@@ -399,9 +382,6 @@ function ExtraForm({ fighters, busy, onAdd }: { fighters: Fighter[]; busy: boole
             <option value="">Pilih…</option>
             {fighters.map((f) => <option key={f.id} value={f.id} disabled={f.id === a}>{f.name}</option>)}
           </select>
-        </label>
-        <label className="f">Jadwal (opsional)
-          <input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} />
         </label>
         <button className="btn" disabled={busy || !a || !b}>Tambah laga</button>
       </div>

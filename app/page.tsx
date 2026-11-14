@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { sb } from "@/lib/supabase";
 import { EMPTY_PUBLIC, loadPublic, type PublicData } from "@/lib/data";
 import { podium, roundLabel, stageKey, totalRounds } from "@/lib/bracket";
-import { METHOD_SHORT, buildRecords, fighterStats, fmtWhen, isBye, isReady, matchCode, statusOf, waitingFor, type FightRecord } from "@/lib/fight";
+import { METHOD_SHORT, buildRecords, fighterStats, isBye, isReady, matchCode, statusOf, waitingFor, type FightRecord } from "@/lib/fight";
 import { useStaff } from "@/lib/staff";
 import type { Match } from "@/lib/types";
 import Loader from "@/components/site/Loader";
@@ -99,14 +99,12 @@ export default function SpectatorPage() {
     const line = (m: Match) => `${name(m.fighter1_id)} vs ${name(m.fighter2_id)} — ${roundLabel(m.round, total, m.kind)} — Match ${matchCode(m.match_no)}`;
     const ready = matches.filter((m) => isReady(m) && !m.winner_id && statusOf(m) !== "cancelled");
     const live = ready.filter((m) => statusOf(m) === "live");
-    const time = (m: Match) => (m.scheduled_at ? Date.parse(m.scheduled_at) : Infinity);
-    const next = ready.filter((m) => statusOf(m) !== "live").sort((a, b) => time(a) - time(b) || a.match_no - b.match_no);
+    const next = ready.filter((m) => statusOf(m) !== "live").sort((a, b) => a.match_no - b.match_no);
     const items: TickerItem[] = live.length
       ? live.map((m) => ({ kind: "live" as const, text: `Live now — ${line(m)}` }))
       : [{ kind: "idle", text: "No active match — waiting for the next fight." }];
     next.slice(0, 2).forEach((m) => {
-      const when = fmtWhen(m.scheduled_at);
-      items.push({ kind: "next", text: `Next — ${line(m)}${when ? ` — ${when}` : ""}` });
+      items.push({ kind: "next", text: `Next — ${line(m)}` });
     });
     const last = records.find((r) => r.tournamentId === (tournament?.id ?? null) || !tournament);
     if (last) {
@@ -144,7 +142,6 @@ export default function SpectatorPage() {
         winnerSide: m.winner_id ? (m.winner_id === m.fighter1_id ? 1 : 2) : null,
         method: m.result_method ?? null,
         durationSec: m.duration_sec ?? null,
-        scheduledAt: m.scheduled_at ?? null,
         completedAt: m.completed_at ?? null,
         waiting: isReady(m) ? null : waitingFor(m, matches),
         match: m,
@@ -156,7 +153,7 @@ export default function SpectatorPage() {
     return {
       matchNo: r.matchNo, stage: r.stage, tournamentName: r.tournamentName, status: "completed",
       a: r.a, b: r.b, winnerSide: r.winnerSide, method: r.method, durationSec: r.durationSec,
-      scheduledAt: null, completedAt: r.completedAt,
+      completedAt: r.completedAt,
     };
   }, [sheet, matches, byId, total, tournament, poolOf]);
 

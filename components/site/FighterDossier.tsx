@@ -8,7 +8,7 @@ import { useUi } from "@/components/site/Ui";
 import { fighterCode, pad2 } from "@/lib/codes";
 import { roundLabel, stageLabel } from "@/lib/bracket";
 import {
-  FIGHTER_STATE_LABEL, METHOD_SHORT, fighterStateOf, fighterStats, fmtClock, fmtDate, fmtWhen, matchCode, nextMatchOf, statusOf,
+  FIGHTER_STATE_LABEL, METHOD_SHORT, fighterStateOf, fighterStats, fmtClock, fmtDate, matchCode, nextMatchOf, statusOf,
   type FightRecord,
 } from "@/lib/fight";
 import type { Fighter, Match } from "@/lib/types";
@@ -76,7 +76,7 @@ export default function FighterDossier({ fighter: f, matches, records, byId, tot
               {roundLabel(next.round, total, next.kind)}, lawan {nextFoe?.name ?? "yang belum ketahuan"}
             </span>
             <span className="dos-next-when">
-              {statusOf(next) === "live" ? "Lagi jalan" : statusOf(next) === "postponed" ? "Ditunda" : fmtWhen(next.scheduled_at) ?? "Jam mulai nyusul"}
+              {statusOf(next) === "live" ? "Lagi jalan" : statusOf(next) === "postponed" ? "Ditunda" : "Belum mulai"}
             </span>
           </button>
         </section>

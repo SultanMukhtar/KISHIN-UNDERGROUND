@@ -230,8 +230,8 @@ function Dashboard({ me }: { me: Me }) {
   const hints: Record<TabKey, string> = {
     fighters: "Daftarin fighter, upload fotonya, terus tandai yang udah bayar.",
     bracket: isSuper
-      ? "Generate bracket sekali setelah pendaftaran ditutup. Tiap fight: atur jadwal, panggil ke ring, mulai, lalu klik Menang buat fighter yang menang."
-      : "Tiap fight: atur jadwal, panggil ke ring, mulai, lalu klik Menang buat fighter yang menang.",
+      ? "Generate bracket sekali setelah pendaftaran ditutup. Tiap fight: panggil ke ring, mulai, lalu klik Menang buat fighter yang menang."
+      : "Tiap fight: panggil ke ring, mulai, lalu klik Menang buat fighter yang menang.",
     betting: "Catat taruhan sebelum fight mulai. Setelah fight selesai, transfer payout lalu tandai Sudah dibayar.",
     archive: "Catatan resmi semua fight yang udah selesai. Keisi sendiri tiap hasil dimasukin.",
     tournament: "Ganti nama turnamen, tutup turnamen yang jalan, dan mulai yang baru.",
@@ -272,7 +272,7 @@ function Dashboard({ me }: { me: Me }) {
         </header>
         {loaded && !data.schemaReady && (
           <div className="notice err" role="alert">
-            <strong>Database belum di-update.</strong> Jadwal &amp; status fight, cara menang, arsip, turnamen, dan riwayat transaksi baru aktif
+            <strong>Database belum di-update.</strong> Status fight, cara menang, arsip, turnamen, dan riwayat transaksi baru aktif
             setelah isi <code>supabase/schema.sql</code> di-Run ulang di Supabase &gt; SQL Editor. Data lama aman, gak ada yang kehapus.
           </div>
         )}

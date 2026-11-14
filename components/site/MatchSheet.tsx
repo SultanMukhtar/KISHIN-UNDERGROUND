@@ -3,7 +3,6 @@ import { useId } from "react";
 import Modal from "@/components/ui/Modal";
 import Mugshot from "@/components/ui/Mugshot";
 import Stamp from "@/components/ui/Stamp";
-import Countdown from "@/components/ui/Countdown";
 import { StatusChip } from "@/components/ui/Chips";
 import { useUi } from "@/components/site/Ui";
 import { fighterCode } from "@/lib/codes";
@@ -23,7 +22,6 @@ export type SheetData = {
   winnerSide: 1 | 2 | null;
   method: ResultMethod | null;
   durationSec: number | null;
-  scheduledAt: string | null;
   completedAt: string | null;
   /** teks "nunggu pemenang fight ..." kalau slotnya belum keisi */
   waiting?: string | null;
@@ -32,12 +30,11 @@ export type SheetData = {
   pool?: Pool;
 };
 
-/** Lembar detail satu fight: dua fighter, status, jadwal, dan hasil resminya. */
+/** Lembar detail satu fight: dua fighter, status, dan hasil resminya. */
 export default function MatchSheet({ data: d, byId, onClose }: { data: SheetData; byId: Map<string, Fighter>; onClose: () => void }) {
   const ui = useUi();
   const uid = useId();
   const done = d.status === "completed" && d.winnerSide !== null;
-  const when = fmtWhen(d.scheduledAt);
   const clock = fmtClock(d.durationSec);
   const winner = d.winnerSide === 1 ? d.a : d.winnerSide === 2 ? d.b : null;
 
@@ -93,18 +90,18 @@ export default function MatchSheet({ data: d, byId, onClose }: { data: SheetData
               <div><dt>Hasil masuk</dt><dd>{fmtWhen(d.completedAt) ?? "Gak dicatat"}</dd></div>
             </>
           ) : (
-            <>
-              <div>
-                <dt>Jadwal</dt>
-                <dd>
-                  {d.status === "live" ? "Lagi jalan sekarang" : d.status === "cancelled" ? "Dibatalkan" : when ?? (d.status === "postponed" ? "Ditunda, jadwal baru nyusul" : "Belum ditentukan")}
-                </dd>
-              </div>
-              {d.status === "upcoming" && d.scheduledAt && (
-                <div><dt>Mulai dalam</dt><dd><Countdown to={d.scheduledAt} /></dd></div>
-              )}
-              <div><dt>Hasil</dt><dd>{d.status === "cancelled" ? "Gak ada, fight batal" : "Belum ada"}</dd></div>
-            </>
+            <div>
+              <dt>Hasil</dt>
+              <dd>
+                {d.status === "cancelled"
+                  ? "Gak ada, fight batal"
+                  : d.status === "live"
+                    ? "Belum ada, fight lagi jalan"
+                    : d.status === "postponed"
+                      ? "Belum ada, fight ditunda"
+                      : "Belum ada"}
+              </dd>
+            </div>
           )}
         </dl>
       </section>

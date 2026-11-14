@@ -21,10 +21,9 @@ export default function RingSection({ matches, byId, poolOf, total, loading }: P
   const called = ready.filter((m) => m.featured && statusOf(m) !== "live");
   const posters = [...live, ...called.filter((m) => !m.winner_id), ...called.filter((m) => m.winner_id)];
   const shown = new Set(posters.map((m) => m.id));
-  const time = (m: Match) => (m.scheduled_at ? Date.parse(m.scheduled_at) : Infinity);
   const next = ready
     .filter((m) => !shown.has(m.id) && !m.winner_id)
-    .sort((a, b) => time(a) - time(b) || a.match_no - b.match_no);
+    .sort((a, b) => a.match_no - b.match_no);
   const nextShown = next.slice(0, NEXT_LIMIT);
 
   const aside = live.length
