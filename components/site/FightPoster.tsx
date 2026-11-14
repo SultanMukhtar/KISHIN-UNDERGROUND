@@ -6,7 +6,7 @@ import { StatusChip } from "@/components/ui/Chips";
 import { useUi } from "@/components/site/Ui";
 import { fighterCode, tilt, times, tornClip } from "@/lib/codes";
 import { multiplier, yen } from "@/lib/betting";
-import { METHOD_SHORT, fmtClock, pad3, statusOf } from "@/lib/fight";
+import { METHOD_SHORT, pad3, statusOf } from "@/lib/fight";
 import type { Fighter, Match, Pool } from "@/lib/types";
 
 type Props = { m: Match; f1?: Fighter; f2?: Fighter; pool?: Pool; round: string };
@@ -26,7 +26,6 @@ export default function FightPoster({ m, f1, f2, pool, round }: Props) {
   const longest = Math.max(4, ...[f1?.name, f2?.name].flatMap((n) => (n ?? "TBD").split(/[\s_]+/)).map((w) => w.length));
   // username Roblox kayak Takeshi_Ryuzaki boleh patah di garis bawah, bukan di tengah kata
   const breakable = (n?: string) => (n ? n.replace(/_/g, "_​") : "TBD");
-  const clock = fmtClock(m.duration_sec);
 
   return (
     <article
@@ -86,8 +85,7 @@ export default function FightPoster({ m, f1, f2, pool, round }: Props) {
         {st === "cancelled" && <>Fight ini dibatalkan. Taruhan dikembalikan utuh.</>}
         {done && (
           <>
-            {winner?.name ?? "?"} menang{m.result_method ? `, ${METHOD_SHORT[m.result_method]}` : ""}
-            {clock ? ` dalam ${clock}` : ""}.
+            {winner?.name ?? "?"} menang{m.result_method ? `, ${METHOD_SHORT[m.result_method]}` : ""}.
           </>
         )}
       </p>

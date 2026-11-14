@@ -118,7 +118,7 @@ export function winnerPatches(
   all: Match[],
   match: Match,
   winnerId: string | null,
-  result?: Pick<Match, "result_method" | "duration_sec">,
+  result?: Pick<Match, "result_method">,
 ): MatchPatch[] {
   const patches: MatchPatch[] = [{ id: match.id, changes: { winner_id: winnerId, ...(winnerId && result ? result : {}) } }];
   if (match.kind !== "main") return patches;

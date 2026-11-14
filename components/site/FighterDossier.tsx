@@ -8,7 +8,7 @@ import { useUi } from "@/components/site/Ui";
 import { fighterCode, pad2 } from "@/lib/codes";
 import { roundLabel, stageLabel } from "@/lib/bracket";
 import {
-  FIGHTER_STATE_LABEL, METHOD_SHORT, fighterStateOf, fighterStats, fmtClock, fmtDate, matchCode, nextMatchOf, statusOf,
+  FIGHTER_STATE_LABEL, METHOD_SHORT, fighterStateOf, fighterStats, fmtDate, matchCode, nextMatchOf, statusOf,
   type FightRecord,
 } from "@/lib/fight";
 import type { Fighter, Match } from "@/lib/types";
@@ -92,7 +92,7 @@ export default function FighterDossier({ fighter: f, matches, records, byId, tot
               const mineIsA = r.a.id === f.id;
               const won = (r.winnerSide === 1) === mineIsA;
               const foe = mineIsA ? r.b : r.a;
-              const clock = fmtClock(r.durationSec);
+              const date = fmtDate(r.completedAt);
               return (
                 <li key={r.key}>
                   <button type="button" className={"dos-rec " + (won ? "is-win" : "is-loss")} onClick={() => ui.openRecord(r)}>
@@ -106,7 +106,7 @@ export default function FighterDossier({ fighter: f, matches, records, byId, tot
                     </span>
                     <span className="dos-rec-how">
                       <b>{r.method ? METHOD_SHORT[r.method] : "–"}</b>
-                      <span>{[clock, fmtDate(r.completedAt)].filter(Boolean).join(", ")}</span>
+                      {date && <span>{date}</span>}
                     </span>
                   </button>
                 </li>

@@ -45,7 +45,6 @@ export type Match = {
   tournament_id?: string | null;
   status?: MatchStatus;
   result_method?: ResultMethod | null;
-  duration_sec?: number | null;
   completed_at?: string | null;
   betting_closed?: boolean;
 };
@@ -81,7 +80,6 @@ export type HistoryRow = {
   fighter_b_name: string;
   winner_name: string;
   result_method: ResultMethod | null;
-  duration_sec: number | null;
   completed_at: string | null; // null = tanggal gak dicatat (Vol. 1)
 };
 

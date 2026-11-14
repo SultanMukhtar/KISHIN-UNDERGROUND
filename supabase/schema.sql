@@ -97,7 +97,7 @@ end $$;
 alter table matches add column if not exists tournament_id uuid references tournaments(id) on delete cascade;
 alter table matches add column if not exists scheduled_at timestamptz;      -- dulu jadwal fight; gak dipakai website lagi, kolomnya dibiarkan
 alter table matches add column if not exists result_method text;            -- cara menang
-alter table matches add column if not exists duration_sec int;              -- lama fight (detik)
+alter table matches add column if not exists duration_sec int;              -- dulu durasi fight; gak dipakai website lagi, kolomnya dibiarkan
 alter table matches add column if not exists completed_at timestamptz;      -- kapan hasil resmi masuk
 alter table matches add column if not exists betting_closed boolean not null default false;  -- taruhan ditutup manual
 

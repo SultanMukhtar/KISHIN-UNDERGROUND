@@ -71,7 +71,7 @@ Setelah itu form ini hilang selamanya dan `/admin` jadi halaman login biasa (**u
 |---|---|---|
 | Pendaftaran, edit profil fighter, upload foto | ✓ | ✓ |
 | Mulai / tunda / batalkan fight, "Tampil hari ini" | ✓ | ✓ |
-| Isi hasil resmi (pemenang, cara menang, durasi) | ✓ | ✓ |
+| Isi hasil resmi (pemenang, cara menang) | ✓ | ✓ |
 | Catat taruhan, tutup / buka taruhan, tandai payout dibayar | ✓ | ✓ |
 | Lihat arsip fight & riwayat transaksi taruhan | ✓ | ✓ |
 | Generate / buat ulang bracket, ganti isi slot ronde 1, laga tambahan | ✓ | – |
@@ -97,7 +97,7 @@ Penonton (tanpa login) cuma bisa **baca**. Semua aturan di atas dijaga database 
 | Catat taruhan sebelum fight mulai, kasih **kode slip** ke bettor | Finance Betting | `/admin` → Taruhan (atau klik fight-nya di Meja taruhan halaman penonton) |
 | Panggil fight ke ring (poster) | Bracket Coordinator / MC | `/admin` → Bracket → centang **Tampil hari ini** |
 | **Mulai fight** → status LIVE, taruhan otomatis ditutup | Referee / MC | `/admin` → Bracket → **Mulai fight** |
-| Pilih **cara menang** (+ durasi), lalu klik **Menang** di fighter yang menang | Referee | `/admin` → Bracket |
+| Pilih **cara menang**, lalu klik **Menang** di fighter yang menang | Referee | `/admin` → Bracket |
 | Bayar bettor yang menang, centang "Sudah dibayar" | Finance Betting | `/admin` → Taruhan |
 
 Yang terjadi otomatis begitu **Menang** diklik: pemenang maju ke ronde berikutnya, yang kalah di semifinal masuk **Perebutan Juara 3**, catatan fight masuk **Arsip**, rekor fighter (menang / kalah / win rate) ikut berubah, taruhan dihitung, dan halaman penonton nampilin pengumuman hasil + cap WIN / LOSS. Begitu final selesai, papan **Juara** keisi sendiri.
@@ -150,7 +150,7 @@ Catatan:
 | `settings` | Nama event, tagline, hero, biaya daftar, house cut default, turnamen yang lagi jalan |
 | `fighters` | Nama, kelas, foto, gaya bertarung, status manual (aktif / cedera / skors / pensiun), status bayar |
 | `tournaments` | Nama, status, babak yang lagi jalan, juara 1–3 (diisi otomatis) |
-| `matches` | Posisi di bracket, dua fighter, status, pemenang, cara menang, durasi |
+| `matches` | Posisi di bracket, dua fighter, status, pemenang, cara menang |
 | `fight_history` | Catatan resmi tiap fight yang selesai (diisi otomatis) |
 | `bets` | Taruhan: bettor, jagoan, nominal, status bayar |
 | `bet_log` | Riwayat semua transaksi taruhan (diisi otomatis) |

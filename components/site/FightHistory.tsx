@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import Reveal from "@/components/ui/Reveal";
 import { useUi } from "@/components/site/Ui";
 import { stageLabel, stageOrder } from "@/lib/bracket";
-import { METHODS, METHOD_SHORT, fmtClock, fmtDate, fmtTime, loserOf, matchCode, winnerOf, type FightRecord } from "@/lib/fight";
+import { METHODS, METHOD_SHORT, fmtDate, fmtTime, loserOf, matchCode, winnerOf, type FightRecord } from "@/lib/fight";
 import type { ResultMethod } from "@/lib/types";
 
 type Props = { records: FightRecord[]; loading: boolean; currentTournamentId: string | null };
@@ -101,7 +101,7 @@ export default function FightHistory({ records, loading, currentTournamentId }: 
             <span>Match</span>
             <span>Fighter</span>
             <span>Winner</span>
-            <span>Method / durasi</span>
+            <span>Method</span>
             <span>Status</span>
           </header>
           {groups.map((g) => (
@@ -111,7 +111,7 @@ export default function FightHistory({ records, loading, currentTournamentId }: 
                 {g.items.map((r) => {
                   const w = winnerOf(r);
                   const l = loserOf(r);
-                  const clock = fmtClock(r.durationSec);
+                  const time = fmtTime(r.completedAt);
                   return (
                     <li key={r.key}>
                       <button type="button" className="rec" onClick={() => ui.openRecord(r)}>
@@ -131,7 +131,7 @@ export default function FightHistory({ records, loading, currentTournamentId }: 
                         </span>
                         <span className="rec-how">
                           <b>{r.method ? METHOD_SHORT[r.method] : "Gak dicatat"}</b>
-                          <span>{clock ? clock : "Durasi gak dicatat"}{fmtTime(r.completedAt) ? `, jam ${fmtTime(r.completedAt)}` : ""}</span>
+                          {time && <span>Jam {time}</span>}
                         </span>
                         <span className="rec-stamp" aria-hidden="true">Completed</span>
                       </button>

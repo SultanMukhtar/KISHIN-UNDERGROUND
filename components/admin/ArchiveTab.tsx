@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { stageLabel } from "@/lib/bracket";
-import { METHOD_SHORT, buildRecords, fmtClock, fmtWhen, matchCode, winnerOf } from "@/lib/fight";
+import { METHOD_SHORT, buildRecords, fmtWhen, matchCode, winnerOf } from "@/lib/fight";
 import type { TabProps } from "@/lib/adminTypes";
 
 /** Catatan resmi semua fight yang selesai (cuma baca). Hasil diubah dari tab Bracket. */
@@ -33,7 +33,7 @@ export default function ArchiveTab({ data }: TabProps) {
       ) : (
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Selesai</th><th>Fight</th><th>Babak</th><th>Turnamen</th><th>Fighter A</th><th>Fighter B</th><th>Pemenang</th><th>Cara</th><th>Durasi</th></tr></thead>
+            <thead><tr><th>Selesai</th><th>Fight</th><th>Babak</th><th>Turnamen</th><th>Fighter A</th><th>Fighter B</th><th>Pemenang</th><th>Cara</th></tr></thead>
             <tbody>
               {shown.map((r) => (
                 <tr key={r.key}>
@@ -45,7 +45,6 @@ export default function ArchiveTab({ data }: TabProps) {
                   <td>{r.b.name}</td>
                   <td><strong>{winnerOf(r).name}</strong></td>
                   <td>{r.method ? METHOD_SHORT[r.method] : "-"}</td>
-                  <td className="mono">{fmtClock(r.durationSec) ?? "-"}</td>
                 </tr>
               ))}
             </tbody>
@@ -53,7 +52,7 @@ export default function ArchiveTab({ data }: TabProps) {
         </div>
       )}
       <p style={{ fontSize: 13, color: "var(--muted)" }}>
-        Arsip ini cuma buat dibaca. Buat ngoreksi hasil, cara menang, atau durasi, pakai tab Bracket; arsipnya ikut berubah sendiri.
+        Arsip ini cuma buat dibaca. Buat ngoreksi hasil atau cara menang, pakai tab Bracket; arsipnya ikut berubah sendiri.
       </p>
     </>
   );

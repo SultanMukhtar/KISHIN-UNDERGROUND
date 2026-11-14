@@ -991,6 +991,7 @@ button.ms-corner:hover .mug img { transform: scale(1.05); }
 .admin .admin-match.is-called { border-color: var(--blood-hot); }
 .admin .admin-match.is-live { border-color: var(--blood-hot); box-shadow: inset 5px 0 0 var(--blood-hot); }
 .am-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 10px; }
+.am-row.is-single { grid-template-columns: minmax(0, 1fr); }
 .am-row label.f { font-size: 13px; }
 .admin .am-row input, .admin .am-row select { padding: 8px 10px; font-size: 15px; }
 .am-note { margin: 0; font-size: 13px; line-height: 1.35; color: var(--ash); }

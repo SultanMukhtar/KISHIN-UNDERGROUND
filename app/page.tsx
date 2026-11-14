@@ -141,7 +141,6 @@ export default function SpectatorPage() {
         b: who(m.fighter2_id),
         winnerSide: m.winner_id ? (m.winner_id === m.fighter1_id ? 1 : 2) : null,
         method: m.result_method ?? null,
-        durationSec: m.duration_sec ?? null,
         completedAt: m.completed_at ?? null,
         waiting: isReady(m) ? null : waitingFor(m, matches),
         match: m,
@@ -152,8 +151,7 @@ export default function SpectatorPage() {
     const r = sheet.record;
     return {
       matchNo: r.matchNo, stage: r.stage, tournamentName: r.tournamentName, status: "completed",
-      a: r.a, b: r.b, winnerSide: r.winnerSide, method: r.method, durationSec: r.durationSec,
-      completedAt: r.completedAt,
+      a: r.a, b: r.b, winnerSide: r.winnerSide, method: r.method, completedAt: r.completedAt,
     };
   }, [sheet, matches, byId, total, tournament, poolOf]);
 

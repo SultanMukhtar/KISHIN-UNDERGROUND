@@ -4,7 +4,7 @@ import Avatar from "@/components/Avatar";
 import { StatusChip } from "@/components/ui/Chips";
 import { sb } from "@/lib/supabase";
 import { generateBracket, roundLabel, totalRounds, winnerPatches } from "@/lib/bracket";
-import { METHODS, METHOD_LABEL, METHOD_SHORT, fmtClock, isBye, isReady, matchCode, parseClock, statusOf } from "@/lib/fight";
+import { METHODS, METHOD_LABEL, METHOD_SHORT, isBye, isReady, matchCode, statusOf } from "@/lib/fight";
 import type { TabProps } from "@/lib/adminTypes";
 import type { Fighter, Match, MatchStatus, ResultMethod } from "@/lib/types";
 
@@ -54,7 +54,7 @@ export default function BracketTab({ me, data, reload, notify }: TabProps) {
   }
 
   /** Isi / ganti / batalin hasil resmi. Pemenang maju otomatis, yang kalah di semifinal masuk perebutan juara 3. */
-  async function setWinner(m: Match, winnerId: string | null, result?: { result_method: ResultMethod; duration_sec: number | null }) {
+  async function setWinner(m: Match, winnerId: string | null, result?: { result_method: ResultMethod }) {
     setBusy(true);
     const patches = winnerPatches(matches, m, winnerId, schemaReady ? result : undefined);
     let failed = false;
@@ -145,7 +145,7 @@ export default function BracketTab({ me, data, reload, notify }: TabProps) {
     g.items.push(m);
   }
   const featuredCount = matches.filter((m) => m.featured).length;
-  const card = { byId, busy, isSuper, schemaReady, paid, patch, setWinner, assign, removeExtra, notify };
+  const card = { byId, busy, isSuper, schemaReady, paid, patch, setWinner, assign, removeExtra };
 
   return (
     <>
@@ -204,46 +204,33 @@ type CardProps = {
   schemaReady: boolean;
   paid: Fighter[];
   patch: (m: Match, changes: Partial<Match>, okMsg?: string) => Promise<void>;
-  setWinner: (m: Match, winnerId: string | null, result?: { result_method: ResultMethod; duration_sec: number | null }) => Promise<void>;
+  setWinner: (m: Match, winnerId: string | null, result?: { result_method: ResultMethod }) => Promise<void>;
   assign: (m: Match, slot: 1 | 2, fighterId: string) => Promise<void>;
   removeExtra: (m: Match) => Promise<void>;
-  notify: (msg: string, err?: boolean) => void;
 };
 
-function MatchCard({ m, byId, busy, isSuper, schemaReady, paid, patch, setWinner, assign, removeExtra, notify }: CardProps) {
+function MatchCard({ m, byId, busy, isSuper, schemaReady, paid, patch, setWinner, assign, removeExtra }: CardProps) {
   const st = statusOf(m);
   const ready = isReady(m);
   const done = !!m.winner_id;
   const [method, setMethod] = useState<ResultMethod>(m.result_method ?? "KO");
-  const [clock, setClock] = useState(fmtClock(m.duration_sec) ?? "");
   const code = matchCode(m.match_no);
 
   // data dari admin lain masuk → form ikut nilai terbaru
   useEffect(() => {
     setMethod(m.result_method ?? "KO");
-    setClock(fmtClock(m.duration_sec) ?? "");
-  }, [m.result_method, m.duration_sec, m.winner_id]);
-
-  const duration = (): number | null | undefined => {
-    const d = parseClock(clock);
-    if (d === undefined) notify("Durasi pakai format menit:detik, misal 2:31. Kosongin kalau gak dicatat.", true);
-    return d;
-  };
+  }, [m.result_method, m.winner_id]);
 
   function pickWinner(fid: string) {
     if (m.winner_id === fid) {
       if (confirm(`Batalin hasil resmi fight ${code}? Pemenangnya ditarik lagi dari ronde berikutnya dan catatan arsipnya dicabut.`)) setWinner(m, null);
       return;
     }
-    const d = duration();
-    if (d === undefined) return;
-    setWinner(m, fid, { result_method: method, duration_sec: d });
+    setWinner(m, fid, { result_method: method });
   }
 
-  function saveDetail() {
-    const d = duration();
-    if (d === undefined) return;
-    patch(m, { result_method: method, duration_sec: d }, `Detail hasil fight ${code} disimpan.`);
+  function saveMethod() {
+    patch(m, { result_method: method }, `Cara menang fight ${code} disimpan.`);
   }
 
   const setStatus = (status: MatchStatus, extra: Partial<Match>, msg: string) => patch(m, { status, ...extra }, msg);
@@ -290,22 +277,18 @@ function MatchCard({ m, byId, busy, isSuper, schemaReady, paid, patch, setWinner
 
       {ready && schemaReady && (
         <>
-          <div className="am-row">
+          <div className="am-row is-single">
             <label className="f">
               Cara menang
               <select value={method} onChange={(e) => setMethod(e.target.value as ResultMethod)} disabled={st === "cancelled"}>
                 {METHODS.map((k) => <option key={k} value={k}>{METHOD_LABEL[k]}</option>)}
               </select>
             </label>
-            <label className="f">
-              Durasi (menit:detik)
-              <input type="text" inputMode="numeric" placeholder="2:31" value={clock} onChange={(e) => setClock(e.target.value)} disabled={st === "cancelled"} />
-            </label>
           </div>
           {done ? (
             <div className="row-actions">
-              <span className="am-note">Hasil: {METHOD_SHORT[m.result_method ?? "KO"]}{fmtClock(m.duration_sec) ? `, ${fmtClock(m.duration_sec)}` : ""}</span>
-              <button className="btn ghost sm" disabled={busy} onClick={saveDetail}>Simpan detail hasil</button>
+              <span className="am-note">Hasil: {METHOD_SHORT[m.result_method ?? "KO"]}</span>
+              <button className="btn ghost sm" disabled={busy} onClick={saveMethod}>Simpan cara menang</button>
             </div>
           ) : (
             <>

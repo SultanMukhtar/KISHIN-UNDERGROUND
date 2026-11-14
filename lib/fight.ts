@@ -79,7 +79,6 @@ export type FightRecord = {
   b: { id: string | null; name: string };
   winnerSide: 1 | 2;
   method: ResultMethod | null;
-  durationSec: number | null;
   completedAt: string | null;
 };
 
@@ -107,7 +106,6 @@ export function buildRecords(
       b: { id: h.fighter_b_id, name: h.fighter_b_name },
       winnerSide: h.winner_side,
       method: h.result_method,
-      durationSec: h.duration_sec,
       completedAt: h.completed_at,
     }));
   } else {
@@ -125,7 +123,6 @@ export function buildRecords(
         b: { id: m.fighter2_id, name: byId.get(m.fighter2_id!)?.name ?? "?" },
         winnerSide: m.winner_id === m.fighter1_id ? 1 : 2,
         method: m.result_method ?? null,
-        durationSec: m.duration_sec ?? null,
         completedAt: m.completed_at ?? null,
       }));
   }
@@ -208,27 +205,6 @@ export function pad3(n: number): string {
 }
 export function matchCode(n: number): string {
   return "#" + pad3(n);
-}
-
-
-/** 151 → "02:31" */
-export function fmtClock(sec: number | null | undefined): string | null {
-  if (sec === null || sec === undefined || sec < 0) return null;
-  const m = Math.floor(sec / 60);
-  const s = Math.floor(sec % 60);
-  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-}
-
-/** "2:31" / "02:31" / "151" → detik. Kosong → null. Gak valid → undefined. */
-export function parseClock(raw: string): number | null | undefined {
-  const t = raw.trim();
-  if (!t) return null;
-  const m = t.match(/^(\d{1,3})[:.](\d{1,2})$/);
-  if (m) {
-    const s = parseInt(m[2], 10);
-    return s > 59 ? undefined : parseInt(m[1], 10) * 60 + s;
-  }
-  return /^\d{1,5}$/.test(t) ? parseInt(t, 10) : undefined;
 }
 
 const DAY = new Intl.DateTimeFormat("id-ID", { weekday: "short", day: "numeric", month: "short" });

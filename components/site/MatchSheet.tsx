@@ -8,7 +8,7 @@ import { useUi } from "@/components/site/Ui";
 import { fighterCode } from "@/lib/codes";
 import { stageLabel } from "@/lib/bracket";
 import { poolSum, yen } from "@/lib/betting";
-import { METHOD_LABEL, bettingNote, fmtClock, fmtWhen, isReady, matchCode } from "@/lib/fight";
+import { METHOD_LABEL, bettingNote, fmtWhen, isReady, matchCode } from "@/lib/fight";
 import type { Fighter, Match, MatchStatus, Pool, ResultMethod } from "@/lib/types";
 
 /** Data yang ditampilin lembar detail: bisa dari match yang masih ada, atau dari catatan arsip. */
@@ -21,7 +21,6 @@ export type SheetData = {
   b: { id: string | null; name: string | null };
   winnerSide: 1 | 2 | null;
   method: ResultMethod | null;
-  durationSec: number | null;
   completedAt: string | null;
   /** teks "nunggu pemenang fight ..." kalau slotnya belum keisi */
   waiting?: string | null;
@@ -35,7 +34,6 @@ export default function MatchSheet({ data: d, byId, onClose }: { data: SheetData
   const ui = useUi();
   const uid = useId();
   const done = d.status === "completed" && d.winnerSide !== null;
-  const clock = fmtClock(d.durationSec);
   const winner = d.winnerSide === 1 ? d.a : d.winnerSide === 2 ? d.b : null;
 
   const corner = (c: SheetData["a"], n: 1 | 2) => {
@@ -86,7 +84,6 @@ export default function MatchSheet({ data: d, byId, onClose }: { data: SheetData
             <>
               <div><dt>Winner</dt><dd>{winner?.name ?? "?"}</dd></div>
               <div><dt>Method</dt><dd>{d.method ? METHOD_LABEL[d.method] : "Gak dicatat"}</dd></div>
-              <div><dt>Durasi</dt><dd>{clock ?? "Gak dicatat"}</dd></div>
               <div><dt>Hasil masuk</dt><dd>{fmtWhen(d.completedAt) ?? "Gak dicatat"}</dd></div>
             </>
           ) : (
