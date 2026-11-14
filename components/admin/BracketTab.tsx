@@ -4,7 +4,7 @@ import Avatar from "@/components/Avatar";
 import { StatusChip } from "@/components/ui/Chips";
 import { sb } from "@/lib/supabase";
 import { generateBracket, roundLabel, totalRounds, winnerPatches } from "@/lib/bracket";
-import { METHODS, METHOD_LABEL, METHOD_SHORT, isBye, isReady, matchCode, statusOf } from "@/lib/fight";
+import { METHODS, METHOD_LABEL, METHOD_SHORT, isBye, isReady, isRegistered, matchCode, statusOf } from "@/lib/fight";
 import type { TabProps } from "@/lib/adminTypes";
 import type { Fighter, Match, MatchStatus, ResultMethod } from "@/lib/types";
 
@@ -14,8 +14,9 @@ export default function BracketTab({ me, data, reload, notify }: TabProps) {
   const [busy, setBusy] = useState(false);
   const byId = useMemo(() => new Map(fighters.map((f) => [f.id, f])), [fighters]);
   const total = totalRounds(matches);
-  const paid = fighters.filter((f) => f.paid);
   const tid = settings?.current_tournament_id ?? null;
+  // cuma fighter yang daftar di vol ini dan udah bayar
+  const paid = fighters.filter((f) => f.paid && isRegistered(f, tid));
 
   async function patch(m: Match, changes: Partial<Match>, okMsg?: string) {
     setBusy(true);
@@ -154,7 +155,7 @@ export default function BracketTab({ me, data, reload, notify }: TabProps) {
           <h3>Generate bracket otomatis</h3>
           <p style={{ fontSize: 13, color: "var(--muted)", marginTop: 0 }}>
             {tournament && <>Turnamen: <strong>{tournament.name}</strong>. </>}
-            Pakai {paid.length} fighter yang statusnya <strong>Sudah bayar</strong>. Diacak, sisa slot jadi BYE (lolos otomatis), pemenang otomatis maju ke ronde berikutnya, yang kalah di semifinal otomatis masuk Perebutan Juara 3.
+            Pakai {paid.length} fighter yang terdaftar di vol ini dan statusnya <strong>Sudah bayar</strong>. Diacak, sisa slot jadi BYE (lolos otomatis), pemenang otomatis maju ke ronde berikutnya, yang kalah di semifinal otomatis masuk Perebutan Juara 3.
           </p>
           <div className="row-actions">
             <button className={matches.length ? "btn danger" : "btn"} onClick={generate} disabled={busy || paid.length < 2}>{matches.length ? "Buat ulang bracket" : "Generate bracket"}</button>

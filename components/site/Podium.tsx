@@ -4,6 +4,8 @@ import Stamp from "@/components/ui/Stamp";
 import Reveal from "@/components/ui/Reveal";
 import { useUi } from "@/components/site/Ui";
 import { fighterCode } from "@/lib/codes";
+import { yen } from "@/lib/betting";
+import type { Prize } from "@/lib/prize";
 import type { Fighter, Tournament } from "@/lib/types";
 
 type Props = {
@@ -17,10 +19,12 @@ type Props = {
   hasThird: boolean;
   /** turnamen sebelumnya yang udah punya juara */
   past: Tournament[];
+  /** hadiah juara 1–3 dari uang pendaftaran + sponsor. null = belum ada / database lama */
+  prize: Prize | null;
 };
 
 /** Tiga juara, ditampilin kayak foto tahanan + papan nama. Keisi sendiri dari hasil resmi final. */
-export default function Podium({ first, second, third, winsOf, tournamentName, hasThird, past }: Props) {
+export default function Podium({ first, second, third, winsOf, tournamentName, hasThird, past, prize }: Props) {
   const ui = useUi();
   const slots: { rank: 1 | 2 | 3; f?: Fighter; title: string; wait: string }[] = [
     { rank: 1, f: first, title: "First place", wait: "Menunggu final" },
@@ -56,6 +60,7 @@ export default function Podium({ first, second, third, winsOf, tournamentName, h
               <span className="placard-code">
                 {f ? `${fighterCode(f.id)} / ${winsOf(f.id)} menang` : wait}
               </span>
+              {prize && <span className="placard-prize">Hadiah {yen(prize.places[rank - 1])}</span>}
             </div>
           </Reveal>
         ))}
@@ -63,6 +68,11 @@ export default function Podium({ first, second, third, winsOf, tournamentName, h
       {tournamentName && (
         <p className="pod-title">
           {decided ? "Juara" : "Turnamen yang lagi jalan"}: <b>{tournamentName}</b>
+        </p>
+      )}
+      {prize && (
+        <p className="pod-prize">
+          Total hadiah <b>{yen(prize.total)}</b>, dari uang pendaftaran dan sponsor.
         </p>
       )}
 

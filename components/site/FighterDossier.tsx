@@ -55,7 +55,6 @@ export default function FighterDossier({ fighter: f, matches, records, byId, tot
             <div><dt>Fighter ID</dt><dd>{fighterCode(f.id)}</dd></div>
             <div><dt>Status</dt><dd>{FIGHTER_STATE_LABEL[state]}</dd></div>
             <div><dt>Kelas / grup</dt><dd>{f.group_name || "Gak dicatat"}</dd></div>
-            <div><dt>Fighting style</dt><dd>{f.fighting_style || "Gak dicatat"}</dd></div>
           </dl>
         </div>
       </div>

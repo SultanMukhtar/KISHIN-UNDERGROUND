@@ -3,6 +3,8 @@ import { useState } from "react";
 import Avatar from "@/components/Avatar";
 import { deletePhoto, sb, uploadPhoto } from "@/lib/supabase";
 import { yen } from "@/lib/betting";
+import { isRegistered } from "@/lib/fight";
+import { PRIZE_CUT_PCT, PRIZE_SPLIT_PCT, prizeOf } from "@/lib/prize";
 import type { TabProps } from "@/lib/adminTypes";
 import type { Sponsor } from "@/lib/types";
 
@@ -35,6 +37,9 @@ export default function SponsorsTab({ data, reload, notify }: TabProps) {
   }
 
   const total = sponsors.reduce((s, x) => s + x.amount, 0);
+  // uang pendaftaran vol ini (fighter yang udah bayar) + sponsor → hadiah juara
+  const registration = data.fighters.filter((f) => f.paid && isRegistered(f, tid)).reduce((s, f) => s + (f.fee ?? 0), 0);
+  const prize = prizeOf({ registration, sponsors: total });
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
@@ -98,6 +103,23 @@ export default function SponsorsTab({ data, reload, notify }: TabProps) {
 
   return (
     <>
+      <div className="card">
+        <h3>Hadiah juara</h3>
+        <p style={{ fontSize: 13, color: "var(--muted)", marginTop: 0 }}>
+          Uang pendaftaran {yen(prize.registration)} + sponsor {yen(prize.sponsors)} = {yen(prize.gross)}. Dipotong {PRIZE_CUT_PCT}% buat kas
+          panitia ({yen(prize.cut)}), sisanya <strong>{yen(prize.total)}</strong> jadi hadiah. Angkanya ikut berubah sendiri tiap ada
+          pendaftaran atau sponsor baru, dan hadiah juara 1–3 tampil di papan Juara halaman penonton.
+        </p>
+        <div className="stats" style={{ marginBottom: 0 }}>
+          {(["Juara 1", "Juara 2", "Juara 3"] as const).map((label, i) => (
+            <div className="stat" key={label}>
+              <div className="k">{label} ({PRIZE_SPLIT_PCT[i]}%)</div>
+              <div className="v mono">{yen(prize.places[i])}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="stats">
         <div className="stat"><div className="k">Total sponsor</div><div className="v mono">{yen(total)}</div></div>
         <div className="stat"><div className="k">Jumlah sponsor</div><div className="v">{sponsors.length}</div></div>

@@ -3,7 +3,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { sb } from "@/lib/supabase";
 import { EMPTY_PUBLIC, loadPublic, type PublicData } from "@/lib/data";
 import { podium, roundLabel, stageKey, totalRounds } from "@/lib/bracket";
-import { METHOD_SHORT, buildRecords, fighterStats, isBye, isReady, matchCode, statusOf, waitingFor, type FightRecord } from "@/lib/fight";
+import { METHOD_SHORT, buildRecords, fighterStats, isBye, isReady, isRegistered, matchCode, statusOf, waitingFor, type FightRecord } from "@/lib/fight";
+import { prizeOf } from "@/lib/prize";
 import { useStaff } from "@/lib/staff";
 import { yen } from "@/lib/betting";
 import type { Match } from "@/lib/types";
@@ -85,6 +86,10 @@ export default function SpectatorPage() {
 
   const { settings, fighters, matches, pools, tournaments, tournament, history, sponsors } = data;
   const sponsorTotal = sponsors.reduce((s, x) => s + x.amount, 0);
+  // fighter yang daftar di vol ini (pendaftaran per vol)
+  const registeredCount = fighters.filter((f) => isRegistered(f, settings?.current_tournament_id)).length;
+  // hadiah juara: uang pendaftaran + sponsor vol ini, dipotong kas panitia, dibagi juara 1–3
+  const prize = useMemo(() => (data.prize ? prizeOf(data.prize) : null), [data.prize]);
   const byId = useMemo(() => new Map(fighters.map((f) => [f.id, f])), [fighters]);
   const poolOf = useMemo(() => new Map(pools.map((p) => [p.match_id, p])), [pools]);
   const total = totalRounds(matches);
@@ -182,6 +187,7 @@ export default function SpectatorPage() {
           tournamentName={tournament?.name ?? null}
           hasThird={matches.some((m) => m.kind === "third")}
           past={past}
+          prize={prize && prize.total > 0 ? prize : null}
         />
       </div>
     </section>
@@ -207,7 +213,7 @@ export default function SpectatorPage() {
           eventName={settings?.event_name ?? "Underground"}
           tagline={settings?.tagline}
           heroUrl={settings?.hero_url}
-          stats={loaded ? { fighters: fighters.length, done: doneCount, total: playable.length, live: liveMatches.length, pool: poolTotal } : null}
+          stats={loaded ? { fighters: registeredCount, done: doneCount, total: playable.length, live: liveMatches.length, pool: poolTotal } : null}
         />
         <Ticker items={ticker} />
         <ChainRule />

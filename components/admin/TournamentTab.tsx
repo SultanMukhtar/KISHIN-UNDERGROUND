@@ -8,7 +8,7 @@ import type { Tournament } from "@/lib/types";
 
 /** Superadmin: nama turnamen yang jalan, mulai turnamen baru, dan arsip turnamen lama + juaranya. */
 export default function TournamentTab({ data, reload, notify }: TabProps) {
-  const { tournament, tournaments, matches, schemaReady } = data;
+  const { tournament, tournaments, matches, schemaReady, perVol } = data;
   const [name, setName] = useState("");
   const [next, setNext] = useState("");
   const [resetPaid, setResetPaid] = useState(false);
@@ -40,14 +40,16 @@ export default function TournamentTab({ data, reload, notify }: TabProps) {
     const warn =
       `Mulai turnamen baru "${v}"?\n\n` +
       `"${tournament?.name ?? "Turnamen sekarang"}" ditutup dan masuk arsip. Hasil, catatan fight, dan juaranya tetap tersimpan. Daftar sponsor turnamen baru mulai kosong.` +
+      (perVol ? "\n\nPendaftaran mulai dari nol: semua fighter harus daftar dan bayar lagi di tab Pendaftaran." : "") +
       (unfinished ? "\n\nMasih ada fight yang belum selesai di turnamen sekarang. Fight itu gak bakal dilanjutin." : "") +
-      (resetPaid ? "\n\nStatus bayar semua fighter di-reset jadi Belum bayar." : "");
+      (!perVol && resetPaid ? "\n\nStatus bayar semua fighter di-reset jadi Belum bayar." : "");
     if (!confirm(warn)) return;
     setBusy(true);
     try {
       const { error } = await sb().rpc("start_tournament", { p_name: v });
       if (error) throw error;
-      if (resetPaid) {
+      if (!perVol && resetPaid) {
+        // database lama (belum ada pendaftaran per vol): reset status bayar manual
         const r = await sb().from("fighters").update({ paid: false, fee: 0 }).eq("paid", true);
         if (r.error) throw r.error;
       }
@@ -99,11 +101,16 @@ export default function TournamentTab({ data, reload, notify }: TabProps) {
       <form className="card" onSubmit={start}>
         <h3>Mulai turnamen baru</h3>
         <p style={{ fontSize: 13, color: "var(--muted)", marginTop: 0 }}>
-          Turnamen sekarang ditutup dan masuk arsip (hasil dan juaranya tetap tersimpan). Bracket dan daftar sponsor baru mulai kosong, fighter tetap terdaftar.
+          Turnamen sekarang ditutup dan masuk arsip (hasil dan juaranya tetap tersimpan).{" "}
+          {perVol
+            ? "Bracket, pendaftaran, dan daftar sponsor mulai kosong lagi. Fighter lama tinggal didaftarin ulang di tab Pendaftaran; foto dan riwayatnya tetap nyambung."
+            : "Bracket dan daftar sponsor baru mulai kosong, fighter tetap terdaftar."}
         </p>
         <div className="form-grid">
-          <label className="f">Nama turnamen baru<input type="text" value={next} maxLength={80} onChange={(e) => setNext(e.target.value)} placeholder="misal Underground Fight Vol. 2" required /></label>
-          <label className="check"><input type="checkbox" checked={resetPaid} onChange={(e) => setResetPaid(e.target.checked)} /> Reset status bayar semua fighter</label>
+          <label className="f">Nama turnamen baru<input type="text" value={next} maxLength={80} onChange={(e) => setNext(e.target.value)} placeholder="misal UNDERGROUND Vol. 3" required /></label>
+          {!perVol && (
+            <label className="check"><input type="checkbox" checked={resetPaid} onChange={(e) => setResetPaid(e.target.checked)} /> Reset status bayar semua fighter</label>
+          )}
           <button className="btn danger" disabled={busy || !next.trim()}>Mulai turnamen baru</button>
         </div>
       </form>

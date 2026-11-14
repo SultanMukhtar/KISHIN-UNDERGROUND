@@ -8,6 +8,13 @@ import type { Fighter, HistoryRow, Match, MatchStatus, ResultMethod } from "./ty
 export const isBye = (m: Match) => m.kind === "main" && m.round === 1 && !!m.fighter1_id && !m.fighter2_id;
 export const isReady = (m: Match) => !!m.fighter1_id && !!m.fighter2_id;
 
+/**
+ * Fighter terdaftar di vol (turnamen) yang lagi jalan?
+ * Database lama tanpa pendaftaran per vol (tournament_id undefined) → semua fighter dianggap terdaftar.
+ */
+export const isRegistered = (f: Fighter, tid: string | null | undefined) =>
+  f.tournament_id === undefined || !tid || f.tournament_id === tid;
+
 export function statusOf(m: Match): MatchStatus {
   if (m.winner_id) return "completed";
   if (m.status && m.status !== "completed") return m.status;

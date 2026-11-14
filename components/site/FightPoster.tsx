@@ -24,7 +24,7 @@ export default function FightPoster({ m, f1, f2, pool, round }: Props) {
   const first = (f?: Fighter, fallback = "?") => (f?.name ?? fallback).split(/[\s_]+/)[0];
   // kata terpanjang dipakai buat ngecilin font, biar nama gak patah di tengah kata
   const longest = Math.max(4, ...[f1?.name, f2?.name].flatMap((n) => (n ?? "TBD").split(/[\s_]+/)).map((w) => w.length));
-  // username Roblox kayak Takeshi_Ryuzaki boleh patah di garis bawah, bukan di tengah kata
+  // nama kayak Takeshi_Ryuzaki boleh patah di garis bawah, bukan di tengah kata
   const breakable = (n?: string) => (n ? n.replace(/_/g, "_​") : "TBD");
 
   return (

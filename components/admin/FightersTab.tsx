@@ -15,46 +15,79 @@ const FLAGS: { value: FighterFlag; label: string }[] = [
   { value: "retired", label: "Pensiun" },
 ];
 
+const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
 export default function FightersTab({ data, reload, notify }: TabProps) {
   const fee = data.settings?.registration_fee ?? 0;
   const ready = data.schemaReady;
+  const tid = data.settings?.current_tournament_id ?? null;
+  // pendaftaran per vol: tiap vol (turnamen) baru, fighter daftar & bayar lagi
+  const perVol = data.perVol;
   const [name, setName] = useState("");
   const [group, setGroup] = useState("");
-  const [style, setStyle] = useState("");
   const [paid, setPaid] = useState(true);
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<Fighter | null>(null);
 
-  const fighters = data.fighters;
+  const all = data.fighters;
+  const fighters = perVol ? all.filter((f) => f.tournament_id === tid) : all; // terdaftar di vol ini
+  const others = perVol ? all.filter((f) => f.tournament_id !== tid) : []; // fighter vol sebelumnya
   const paidList = fighters.filter((f) => f.paid);
   const income = paidList.reduce((s, f) => s + (f.fee ?? 0), 0);
   const shown = fighters.filter((f) => f.name.toLowerCase().includes(q.toLowerCase()));
-  const byId = useMemo(() => new Map(fighters.map((f) => [f.id, f])), [fighters]);
+  const byId = useMemo(() => new Map(all.map((f) => [f.id, f])), [all]);
   const records = useMemo(
     () => buildRecords(data.history, data.matches, byId, data.tournament?.name ?? null),
     [data.history, data.matches, byId, data.tournament],
   );
 
+  /** Punya riwayat di vol lain (fight tercatat / juara turnamen lain)? Datanya gak boleh ikut kehapus. */
+  const hasPast = (f: Fighter) =>
+    (data.history ?? []).some((h) => h.tournament_id !== tid && (h.fighter_a_id === f.id || h.fighter_b_id === f.id)) ||
+    data.tournaments.some((t) => t.id !== tid && [t.champion_id, t.runner_up_id, t.third_id].includes(f.id));
+
   async function add(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) return;
+    const nm = name.trim();
+    if (!nm) return;
+    const existing = all.find((f) => sameName(f.name, nm));
+    if (existing && (!perVol || existing.tournament_id === tid)) {
+      return notify(perVol ? `${existing.name} udah terdaftar di vol ini.` : "Nama fighter itu sudah terdaftar.", true);
+    }
     setBusy(true);
     let photo_url: string | null = null;
     try {
       photo_url = file ? await uploadPhoto(file, "fighters") : null;
-      const { error } = await sb().from("fighters").insert({
-        name: name.trim(), group_name: group.trim() || null, paid, fee: paid ? fee : 0, photo_url,
-        ...(ready ? { fighting_style: style.trim() || null } : {}),
-      });
-      if (error) {
-        await deletePhoto(photo_url); // pendaftaran gagal → foto yang terlanjur ke-upload dibuang
-        throw new Error(error.code === "23505" ? "Nama fighter itu sudah terdaftar." : error.message);
+      if (existing) {
+        // fighter vol sebelumnya daftar lagi: foto & riwayat lamanya tetap nyambung
+        const { error } = await sb().from("fighters").update({
+          tournament_id: tid,
+          paid,
+          fee: paid ? fee : 0,
+          ...(group.trim() ? { group_name: group.trim() } : {}),
+          ...(photo_url ? { photo_url } : {}),
+        }).eq("id", existing.id);
+        if (error) {
+          await deletePhoto(photo_url);
+          throw error;
+        }
+        if (photo_url) await deletePhoto(existing.photo_url); // foto lama diganti yang baru
+        notify(`${existing.name} didaftarin lagi buat vol ini.`);
+      } else {
+        const { error } = await sb().from("fighters").insert({
+          name: nm, group_name: group.trim() || null, paid, fee: paid ? fee : 0, photo_url,
+          ...(perVol ? { tournament_id: tid } : {}),
+        });
+        if (error) {
+          await deletePhoto(photo_url); // pendaftaran gagal → foto yang terlanjur ke-upload dibuang
+          throw new Error(error.code === "23505" ? "Nama fighter itu sudah terdaftar." : error.message);
+        }
+        notify(`${nm} terdaftar.`);
       }
-      setName(""); setGroup(""); setStyle(""); setFile(null); setPaid(true);
+      setName(""); setGroup(""); setFile(null); setPaid(true);
       (e.target as HTMLFormElement).reset();
-      notify(`${name.trim()} terdaftar.`);
       await reload();
     } catch (err) {
       notify((err as Error).message, true);
@@ -95,6 +128,16 @@ export default function FightersTab({ data, reload, notify }: TabProps) {
 
   async function remove(f: Fighter) {
     const inBracket = data.matches.some((m) => [m.fighter1_id, m.fighter2_id].includes(f.id));
+    if (perVol && hasPast(f)) {
+      // cuma dikeluarin dari pendaftaran vol ini; data, foto, dan riwayatnya tetap disimpan
+      if (inBracket) return notify(`${f.name} masih ada di bracket vol ini. Minta superadmin ganti slot-nya di tab Bracket dulu.`, true);
+      if (!confirm(`Keluarin ${f.name} dari pendaftaran vol ini?\n\nFoto dan riwayat fight-nya di vol lain tetap disimpan. Bisa didaftarin lagi kapan aja.`)) return;
+      const { error } = await sb().from("fighters").update({ tournament_id: null, paid: false, fee: 0 }).eq("id", f.id);
+      if (error) return notify(error.message, true);
+      notify(`${f.name} dikeluarin dari pendaftaran vol ini.`);
+      await reload();
+      return;
+    }
     const warn = inBracket ? "\n\nFighter ini sudah ada di bracket — slot-nya akan jadi kosong dan taruhan ke dia ikut terhapus." : "";
     if (!confirm(`Hapus ${f.name}?${warn}`)) return;
     const { error } = await sb().from("fighters").delete().eq("id", f.id);
@@ -107,24 +150,34 @@ export default function FightersTab({ data, reload, notify }: TabProps) {
   return (
     <>
       <div className="stats">
-        <div className="stat"><div className="k">Terdaftar</div><div className="v">{fighters.length}</div></div>
+        <div className="stat"><div className="k">{perVol ? "Terdaftar vol ini" : "Terdaftar"}</div><div className="v">{fighters.length}</div></div>
         <div className="stat"><div className="k">Sudah bayar</div><div className="v" style={{ color: "var(--green)" }}>{paidList.length}</div></div>
         <div className="stat"><div className="k">Belum bayar</div><div className="v" style={{ color: "var(--red)" }}>{fighters.length - paidList.length}</div></div>
-        <div className="stat"><div className="k">Kas registrasi</div><div className="v mono">{yen(income)}</div></div>
+        <div className="stat"><div className="k">Uang pendaftaran</div><div className="v mono">{yen(income)}</div></div>
       </div>
 
       <form className="card" onSubmit={add}>
-        <h3>Daftarkan fighter baru</h3>
+        <h3>{perVol && data.tournament ? `Daftarkan fighter ke ${data.tournament.name}` : "Daftarkan fighter"}</h3>
+        {perVol && (
+          <p style={{ fontSize: 13, color: "var(--muted)", marginTop: 0 }}>
+            Pendaftaran berlaku per vol: tiap vol baru, fighter daftar dan bayar lagi. Fighter dari vol sebelumnya tinggal ketik namanya
+            (muncul di saran), foto dan riwayat fight-nya tetap nyambung.
+          </p>
+        )}
         <div className="form-grid">
-          <label className="f">Nama fighter / username Roblox<input type="text" value={name} onChange={(e) => setName(e.target.value)} required /></label>
+          <label className="f">Nama fighter
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} required maxLength={60} autoComplete="off" list={perVol ? "ug-past-fighters" : undefined} />
+          </label>
           <label className="f">Kelas / grup RP<input type="text" value={group} onChange={(e) => setGroup(e.target.value)} placeholder="opsional" /></label>
-          {ready && (
-            <label className="f">Gaya bertarung<input type="text" value={style} onChange={(e) => setStyle(e.target.value)} placeholder="opsional, misal Boxing" maxLength={40} /></label>
-          )}
           <label className="f">Foto fighter<input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></label>
           <label className="check"><input type="checkbox" checked={paid} onChange={(e) => setPaid(e.target.checked)} /> Sudah bayar {yen(fee)}</label>
           <button className="btn" disabled={busy}>{busy ? "Menyimpan…" : "Daftarkan"}</button>
         </div>
+        {perVol && (
+          <datalist id="ug-past-fighters">
+            {others.map((f) => <option key={f.id} value={f.name} />)}
+          </datalist>
+        )}
       </form>
 
       {editing && (
@@ -146,18 +199,23 @@ export default function FightersTab({ data, reload, notify }: TabProps) {
       <div className="card" style={{ padding: 0, border: "none", background: "transparent" }}>
         <input type="text" placeholder="Cari nama fighter…" value={q} onChange={(e) => setQ(e.target.value)} style={{ marginBottom: 10 }} aria-label="Cari nama fighter" />
         {fighters.length === 0 ? (
-          <div className="empty-state">Belum ada fighter yang daftar.</div>
+          <div className="empty-state">
+            {perVol
+              ? `Belum ada fighter yang daftar di vol ini.${others.length ? " Fighter vol sebelumnya bisa didaftarin lagi lewat form di atas." : ""}`
+              : "Belum ada fighter yang daftar."}
+          </div>
         ) : shown.length === 0 ? (
           <div className="empty-state">Gak ada fighter bernama &quot;{q}&quot;.</div>
         ) : (
           <div className="table-wrap">
             <table>
               <thead>
-                <tr><th>#</th><th>Fighter</th><th>Kelas / gaya</th><th>Status</th><th>Menang–kalah</th><th>Bayar</th><th>Fee</th><th>Daftar</th><th></th></tr>
+                <tr><th>#</th><th>Fighter</th><th>Kelas</th><th>Status</th><th>Menang–kalah</th><th>Bayar</th><th>Fee</th><th>Pertama daftar</th><th></th></tr>
               </thead>
               <tbody>
                 {shown.map((f) => {
                   const st = fighterStats(f.id, records);
+                  const keep = perVol && hasPast(f);
                   return (
                     <tr key={f.id}>
                       <td>{fighters.indexOf(f) + 1}</td>
@@ -167,7 +225,7 @@ export default function FightersTab({ data, reload, notify }: TabProps) {
                           <span style={{ whiteSpace: "nowrap" }}><strong>{f.name}</strong><br /><span className="mono" style={{ fontSize: 12, color: "var(--muted)" }}>{fighterCode(f.id)}</span></span>
                         </span>
                       </td>
-                      <td>{f.group_name ?? "-"}{f.fighting_style && <><br /><span style={{ fontSize: 13, color: "var(--muted)" }}>{f.fighting_style}</span></>}</td>
+                      <td>{f.group_name ?? "-"}</td>
                       <td style={{ whiteSpace: "nowrap" }}>{FIGHTER_STATE_LABEL[fighterStateOf(f, data.matches)]}</td>
                       <td className="mono" style={{ whiteSpace: "nowrap" }}>{st.wins}–{st.losses}</td>
                       <td>
@@ -177,7 +235,7 @@ export default function FightersTab({ data, reload, notify }: TabProps) {
                         </button>
                       </td>
                       <td className="mono">{yen(f.fee ?? 0)}</td>
-                      <td style={{ whiteSpace: "nowrap" }}>{f.created_at ? new Date(f.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "-"}</td>
+                      <td style={{ whiteSpace: "nowrap" }}>{f.created_at ? new Date(f.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-"}</td>
                       <td>
                         <div className="row-actions" style={{ flexWrap: "nowrap" }}>
                           <label className="btn ghost sm" style={{ cursor: "pointer" }}>
@@ -186,7 +244,9 @@ export default function FightersTab({ data, reload, notify }: TabProps) {
                           </label>
                           {f.photo_url && <button className="btn danger sm" onClick={() => removePhoto(f)}>Hapus foto</button>}
                           <button className="btn ghost sm" onClick={() => { setEditing(f); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Edit</button>
-                          <button className="btn danger sm" onClick={() => remove(f)}>Hapus</button>
+                          <button className="btn danger sm" onClick={() => remove(f)} title={keep ? "Keluarin dari vol ini, riwayatnya tetap disimpan" : undefined}>
+                            {keep ? "Keluarin" : "Hapus"}
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -204,7 +264,6 @@ export default function FightersTab({ data, reload, notify }: TabProps) {
 function EditForm({ fighter, ready, onSave, onCancel }: { fighter: Fighter; ready: boolean; onSave: (c: Partial<Fighter>) => Promise<void>; onCancel: () => void }) {
   const [name, setName] = useState(fighter.name);
   const [group, setGroup] = useState(fighter.group_name ?? "");
-  const [style, setStyle] = useState(fighter.fighting_style ?? "");
   const [status, setStatus] = useState<FighterFlag>(fighter.status ?? "active");
   const [notes, setNotes] = useState(fighter.notes ?? "");
   const [busy, setBusy] = useState(false);
@@ -217,7 +276,7 @@ function EditForm({ fighter, ready, onSave, onCancel }: { fighter: Fighter; read
       name: name.trim(),
       group_name: group.trim() || null,
       notes: notes.trim() || null,
-      ...(ready ? { fighting_style: style.trim() || null, status } : {}),
+      ...(ready ? { status } : {}),
     });
     setBusy(false);
   }
@@ -226,17 +285,14 @@ function EditForm({ fighter, ready, onSave, onCancel }: { fighter: Fighter; read
     <form className="card is-editing" onSubmit={submit}>
       <h3>Edit profil {fighter.name}</h3>
       <div className="form-grid">
-        <label className="f">Nama fighter<input type="text" value={name} onChange={(e) => setName(e.target.value)} required /></label>
+        <label className="f">Nama fighter<input type="text" value={name} onChange={(e) => setName(e.target.value)} required maxLength={60} /></label>
         <label className="f">Kelas / grup RP<input type="text" value={group} onChange={(e) => setGroup(e.target.value)} /></label>
         {ready && (
-          <>
-            <label className="f">Gaya bertarung<input type="text" value={style} onChange={(e) => setStyle(e.target.value)} maxLength={40} /></label>
-            <label className="f">Status
-              <select value={status} onChange={(e) => setStatus(e.target.value as FighterFlag)}>
-                {FLAGS.map((x) => <option key={x.value} value={x.value}>{x.label}</option>)}
-              </select>
-            </label>
-          </>
+          <label className="f">Status
+            <select value={status} onChange={(e) => setStatus(e.target.value as FighterFlag)}>
+              {FLAGS.map((x) => <option key={x.value} value={x.value}>{x.label}</option>)}
+            </select>
+          </label>
         )}
       </div>
       <label className="f" style={{ marginTop: 10 }}>Catatan panitia (gak tampil ke penonton)<textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} /></label>

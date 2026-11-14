@@ -5,7 +5,7 @@ import { sb } from "@/lib/supabase";
 import { api } from "@/lib/api";
 import type { AdminData, Me, TabProps } from "@/lib/adminTypes";
 import { loadAdmin } from "@/lib/data";
-import { isBye } from "@/lib/fight";
+import { isBye, isRegistered } from "@/lib/fight";
 import FightersTab from "@/components/admin/FightersTab";
 import BracketTab from "@/components/admin/BracketTab";
 import BettingTab from "@/components/admin/BettingTab";
@@ -23,7 +23,7 @@ const TABS = [
   { key: "betting", label: "Taruhan", superOnly: false },
   { key: "archive", label: "Arsip", superOnly: false },
   { key: "tournament", label: "Turnamen", superOnly: true },
-  { key: "sponsors", label: "Sponsor", superOnly: true },
+  { key: "sponsors", label: "Sponsor & Hadiah", superOnly: true },
   { key: "settings", label: "Pengaturan", superOnly: true },
   { key: "accounts", label: "Akun Admin", superOnly: true },
 ] as const;
@@ -179,7 +179,7 @@ function Dashboard({ me }: { me: Me }) {
   const [tab, setTab] = useState<TabKey>("fighters");
   const [data, setData] = useState<AdminData>({
     settings: null, fighters: [], matches: [], bets: [], betLog: [], tournaments: [], tournament: null, history: null,
-    sponsors: [], sponsorsReady: true, schemaReady: true,
+    sponsors: [], sponsorsReady: true, perVol: false, schemaReady: true,
   });
   const [loaded, setLoaded] = useState(false);
   const [msg, setMsg] = useState<{ text: string; err?: boolean } | null>(null);
@@ -225,21 +225,21 @@ function Dashboard({ me }: { me: Me }) {
 
   const playable = data.matches.filter((m) => !isBye(m));
   const counts: Partial<Record<TabKey, string>> = {
-    fighters: String(data.fighters.length),
+    fighters: String(data.fighters.filter((f) => !data.perVol || isRegistered(f, data.settings?.current_tournament_id)).length),
     bracket: playable.length ? `${playable.filter((m) => m.winner_id).length}/${playable.length}` : undefined,
     betting: data.bets.length ? String(data.bets.length) : undefined,
     archive: data.history?.length ? String(data.history.length) : undefined,
     sponsors: data.sponsors.length ? String(data.sponsors.length) : undefined,
   };
   const hints: Record<TabKey, string> = {
-    fighters: "Daftarin fighter, upload fotonya, terus tandai yang udah bayar.",
+    fighters: "Daftarin fighter buat vol ini, upload fotonya, terus tandai yang udah bayar. Tiap vol baru, fighter daftar lagi.",
     bracket: isSuper
       ? "Generate bracket sekali setelah pendaftaran ditutup. Tiap fight: panggil ke ring, mulai, lalu klik Menang buat fighter yang menang."
       : "Tiap fight: panggil ke ring, mulai, lalu klik Menang buat fighter yang menang.",
     betting: "Catat taruhan sebelum fight mulai. Setelah fight selesai, transfer payout lalu tandai Sudah dibayar.",
     archive: "Catatan resmi semua fight yang udah selesai. Keisi sendiri tiap hasil dimasukin.",
     tournament: "Ganti nama turnamen, tutup turnamen yang jalan, dan mulai yang baru.",
-    sponsors: "Sponsor turnamen yang lagi jalan. Nama, foto, dan jumlah sponsornya tampil di halaman penonton.",
+    sponsors: "Sponsor vol ini dan hadiah juara. Nama, foto, dan jumlah sponsor tampil di halaman penonton, begitu juga hadiah juara 1–3.",
     settings: "Foto hero, nama event, tagline, biaya daftar, dan house cut default.",
     accounts: "Tambah, hapus, atau ganti password akun panitia.",
   };

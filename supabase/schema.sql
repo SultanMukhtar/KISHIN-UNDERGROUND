@@ -5,7 +5,7 @@
 --
 -- Isi:
 --   settings        pengaturan event (1 baris) + turnamen yang lagi jalan
---   fighters        fighter + gaya bertarung + status
+--   fighters        fighter + status + pendaftaran per vol (tournament_id, paid, fee)
 --   tournaments     turnamen (yang jalan + arsip) dan podiumnya
 --   matches         bracket & laga tambahan: status, hasil
 --   fight_history   catatan resmi tiap fight yang selesai (diisi otomatis)
@@ -39,7 +39,7 @@ create table if not exists fighters (
   notes text,
   created_at timestamptz not null default now()   -- tanggal daftar otomatis
 );
-alter table fighters add column if not exists fighting_style text;
+alter table fighters add column if not exists fighting_style text;   -- dulu gaya bertarung; gak dipakai website lagi, kolomnya dibiarkan
 -- status manual dari panitia. "Gugur" dan "Juara" dihitung otomatis dari hasil fight, gak disimpan di sini.
 alter table fighters add column if not exists status text not null default 'active';
 alter table fighters drop constraint if exists fighters_status_check;
@@ -590,6 +590,31 @@ begin
   perform refresh_tournament(tid);
 end $$;
 
+-- ---------- PENDAFTARAN PER VOL ----------
+-- fighters.tournament_id = vol (turnamen) tempat fighter itu terdaftar; paid & fee berlaku buat vol itu.
+-- Turnamen baru → semua fighter otomatis belum terdaftar, tinggal didaftarin ulang (foto & riwayat tetap nyambung).
+-- Waktu kolomnya baru dibuat (SEKALI aja), fighter yang udah ada dianggap terdaftar di turnamen yang lagi jalan.
+do $$
+begin
+  if not exists (select 1 from information_schema.columns
+                 where table_schema = 'public' and table_name = 'fighters' and column_name = 'tournament_id') then
+    alter table fighters add column tournament_id uuid references tournaments(id) on delete set null;
+    update fighters set tournament_id = (select current_tournament_id from settings where id = 1);
+  end if;
+end $$;
+create index if not exists fighters_tournament_idx on fighters(tournament_id);
+
+-- ---------- HADIAH JUARA (aman buat publik: cuma total, tanpa nama & status bayar per orang) ----------
+-- Uang pendaftaran (fighter yang udah bayar di vol yang lagi jalan) + sponsor vol itu.
+-- Pembagiannya (potongan kas panitia 30%, juara 1/2/3 = 50/30/20%) dihitung di lib/prize.ts.
+drop view if exists prize_pool;
+create view prize_pool as
+select
+  coalesce((select sum(f.fee) from fighters f where f.paid and f.tournament_id = s.current_tournament_id), 0)::bigint as registration,
+  coalesce((select sum(sp.amount) from sponsors sp where sp.tournament_id = s.current_tournament_id), 0)::bigint as sponsors
+from settings s
+where s.id = 1;
+
 -- =========================================================
 -- KEAMANAN (Row Level Security)
 -- Penonton (anon) cuma bisa BACA. Admin ngelola operasional, pengaturan & turnamen cuma superadmin.
@@ -658,9 +683,10 @@ create policy "superadmin all sponsors" on sponsors for all to authenticated usi
 
 -- Penonton cuma boleh lihat kolom fighter yang aman (status bayar, fee, catatan disembunyikan)
 revoke select on fighters from anon;
-grant select (id, name, group_name, photo_url, fighting_style, status) on fighters to anon;
+grant select (id, name, group_name, photo_url, fighting_style, status, tournament_id) on fighters to anon;
 
 grant select on match_pools to anon, authenticated;
+grant select on prize_pool to anon, authenticated;
 
 -- =========================================================
 -- REALTIME (website penonton update otomatis tanpa refresh)
