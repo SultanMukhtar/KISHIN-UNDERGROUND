@@ -58,18 +58,21 @@ export default function SettingsTab({ data, reload, notify }: TabProps) {
     setBusy(true);
     try {
       const used = new Set<string>();
-      const [f, st] = await Promise.all([
+      const [f, st, sp] = await Promise.all([
         sb().from("fighters").select("photo_url"),
         sb().from("settings").select("hero_url").eq("id", 1).maybeSingle(),
+        sb().from("sponsors").select("photo_url"), // semua turnamen, termasuk arsip
       ]);
       if (f.error) throw f.error;
       if (st.error) throw st.error;
       (f.data ?? []).forEach((r) => { const p = photoPath(r.photo_url); if (p) used.add(p); });
+      (sp.data ?? []).forEach((r) => { const p = photoPath(r.photo_url); if (p) used.add(p); });
       const hp = photoPath(st.data?.hero_url);
       if (hp) used.add(hp);
 
       const orphans: string[] = [];
-      for (const folder of ["fighters", "hero"]) {
+      // tabel sponsor belum ada / gagal dibaca → folder sponsors/ gak disentuh sama sekali
+      for (const folder of ["fighters", "hero", ...(sp.error ? [] : ["sponsors"])]) {
         const { data: files, error } = await sb().storage.from("photos").list(folder, { limit: 1000 });
         if (error) throw error;
         for (const file of files ?? []) {
@@ -123,7 +126,7 @@ export default function SettingsTab({ data, reload, notify }: TabProps) {
       <div className="card">
         <h3>Bersihkan storage foto</h3>
         <p style={{ fontSize: 13, color: "var(--muted)", marginTop: 0 }}>
-          Foto yang diganti/dihapus udah otomatis ikut kehapus. Tombol ini buat jaga-jaga: nyari file foto yang gak dipakai fighter mana pun atau hero, lalu menghapusnya.
+          Foto yang diganti/dihapus udah otomatis ikut kehapus. Tombol ini buat jaga-jaga: nyari file foto yang gak dipakai fighter, sponsor, atau hero, lalu menghapusnya.
         </p>
         <button className="btn ghost" onClick={cleanupPhotos} disabled={busy}>Cari & hapus foto nganggur</button>
       </div>

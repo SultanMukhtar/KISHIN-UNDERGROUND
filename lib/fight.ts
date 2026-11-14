@@ -11,7 +11,7 @@ export const isReady = (m: Match) => !!m.fighter1_id && !!m.fighter2_id;
 export function statusOf(m: Match): MatchStatus {
   if (m.winner_id) return "completed";
   if (m.status && m.status !== "completed") return m.status;
-  // database lama (belum ada kolom status): yang lagi "tampil hari ini" = lagi di ring
+  // database lama (belum ada kolom status): yang lagi "tampil minggu ini" = lagi di ring
   if (m.status === undefined && m.featured && isReady(m)) return "live";
   return "upcoming";
 }

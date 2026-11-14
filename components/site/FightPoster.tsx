@@ -80,7 +80,7 @@ export default function FightPoster({ m, f1, f2, pool, round }: Props) {
 
       <p className="poster-when">
         {st === "live" && <>Fight lagi jalan.</>}
-        {st === "upcoming" && <>Dipanggil panitia. Sebentar lagi naik ring.</>}
+        {st === "upcoming" && <>Fight minggu ini. Tunggu dipanggil ke ring.</>}
         {st === "postponed" && <>Ditunda panitia.</>}
         {st === "cancelled" && <>Fight ini dibatalkan. Taruhan dikembalikan utuh.</>}
         {done && (

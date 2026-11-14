@@ -219,6 +219,7 @@ export default function BettingTab({ me, data, reload, notify }: TabProps) {
                   </table>
                 </div>
               )}
+              {cur.bets.length > 0 && <PayoutKey />}
 
               {schemaReady && (
                 <details className="admin-details">
@@ -251,5 +252,38 @@ export default function BettingTab({ me, data, reload, notify }: TabProps) {
         </>
       )}
     </>
+  );
+}
+
+/** Penjelasan kolom Status, Payout, dan Dibayar di tabel taruhan. */
+function PayoutKey() {
+  return (
+    <div className="card paykey-card">
+      <h3>Arti Status, Payout, dan Dibayar</h3>
+      <dl className="paykey">
+        <dt>Status</dt>
+        <dd>
+          <ul className="paykey-status">
+            <li><span className="pill neutral">Menunggu</span><span>Fight belum selesai. Belum ada yang perlu dibayar.</span></li>
+            <li><span className="pill ok">Menang</span><span>Jagoannya menang. Bettor dapat payout.</span></li>
+            <li><span className="pill no">Kalah</span><span>Jagoannya kalah. Gak dapat apa-apa, uangnya dibagi ke bettor yang menang.</span></li>
+            <li><span className="pill ok">Batal</span><span>Fight dibatalkan, atau jagoannya udah gak ada di fight ini. Taruhannya dikembalikan utuh.</span></li>
+          </ul>
+        </dd>
+        <dt>Payout</dt>
+        <dd>
+          Jumlah Yen yang harus ditransfer ke rekening / Yentag bettor. Kalau menang: modal balik utuh, ditambah bagian dari
+          uang pihak yang kalah setelah dipotong house cut. Kalau batal: nominal taruhannya balik utuh. Tanda &quot;-&quot; berarti
+          gak ada yang perlu ditransfer.
+        </dd>
+        <dt>Dibayar</dt>
+        <dd>
+          Centang setelah payout beneran ditransfer. <strong>Belum</strong> berarti masih utang ke bettor dan ikut dihitung di
+          &quot;Belum dibayar ke bettor&quot; di atas. <strong>Sudah</strong> berarti beres. Bettor yang ngecek kode slip di
+          halaman penonton langsung lihat &quot;Udah ditransfer&quot; atau &quot;Belum ditransfer&quot;. Salah centang? Klik lagi,
+          semuanya tercatat di riwayat transaksi.
+        </dd>
+      </dl>
+    </div>
   );
 }

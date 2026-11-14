@@ -4,9 +4,9 @@ Website live buat event underground fight di Kishin High School (Roblox RP).
 Semua fight, taruhan, dan uang di sini fiksi (mata uang RP).
 
 - **`/`** → halaman penonton, satu halaman panjang:
-  layar pembuka → hero + angka live → ticker fight → **Lagi di ring** (poster + fight berikutnya) → **Bracket** (pohon turnamen) → **Meja taruhan** (pool, kelipatan, cek slip) → **Fight history** (arsip) → **Juara** → **Aturan**.
+  layar pembuka → hero + angka live → ticker fight → **Lagi di ring** (poster + fight berikutnya) → **Bracket** (pohon turnamen) → **Meja taruhan** (pool, kelipatan, cek slip) → **Fight history** (arsip) → **Juara** → **Sponsor** → **Aturan**.
   Update otomatis tanpa refresh.
-- **`/admin`** → panel panitia (login username + password): pendaftaran & profil fighter, bracket, status / hasil fight, laga tambahan, taruhan & payout, arsip, turnamen, pengaturan, akun admin.
+- **`/admin`** → panel panitia (login username + password): pendaftaran & profil fighter, bracket, status / hasil fight, laga tambahan, taruhan & payout, arsip, turnamen, sponsor, pengaturan, akun admin.
 
 Stack: Next.js (hosting di Vercel) + Supabase (database, login, penyimpanan foto). Dua-duanya gratis. Gak ada library animasi tambahan: geraknya CSS + sedikit JavaScript.
 
@@ -17,7 +17,7 @@ Stack: Next.js (hosting di Vercel) + Supabase (database, login, penyimpanan foto
 Versi ini nambah tabel dan kolom baru (status fight, cara menang, turnamen, arsip, riwayat transaksi).
 
 1. Supabase → **SQL Editor** → **New query** → copy-paste **seluruh** isi `supabase/schema.sql` → **Run**.
-2. Selesai. Data lama aman: fighter, bracket, dan taruhan gak ada yang kehapus. Match yang lagi "Tampil hari ini" otomatis jadi **LIVE**, bracket yang ada masuk ke turnamen pertama (`<nama event> Vol. 1`).
+2. Selesai. Data lama aman: fighter, bracket, dan taruhan gak ada yang kehapus. Match yang lagi "Tampil minggu ini" otomatis jadi **LIVE**, bracket yang ada masuk ke turnamen pertama (`<nama event> Vol. 1`).
 
 Selama langkah ini belum dijalanin, website tetap jalan kayak versi lama (tanpa status fight, arsip, dan turnamen), dan panel panitia nampilin peringatan "Database belum di-update".
 
@@ -70,12 +70,13 @@ Setelah itu form ini hilang selamanya dan `/admin` jadi halaman login biasa (**u
 | | Superadmin (Hito Kassa) | Admin |
 |---|---|---|
 | Pendaftaran, edit profil fighter, upload foto | ✓ | ✓ |
-| Mulai / tunda / batalkan fight, "Tampil hari ini" | ✓ | ✓ |
+| Mulai / tunda / batalkan fight, "Tampil minggu ini" | ✓ | ✓ |
 | Isi hasil resmi (pemenang, cara menang) | ✓ | ✓ |
 | Catat taruhan, tutup / buka taruhan, tandai payout dibayar | ✓ | ✓ |
 | Lihat arsip fight & riwayat transaksi taruhan | ✓ | ✓ |
 | Generate / buat ulang bracket, ganti isi slot ronde 1, laga tambahan | ✓ | – |
 | Turnamen: ganti nama, mulai turnamen baru, hapus arsip turnamen | ✓ | – |
+| Sponsor: tambah, edit, hapus (nama, foto, jumlah) | ✓ | – |
 | Ubah house cut per match, lihat untung kas | ✓ | – |
 | Pengaturan (hero, biaya daftar, house cut default) | ✓ | – |
 | Akun Admin: tambah, hapus, ganti password | ✓ | – |
@@ -95,7 +96,7 @@ Penonton (tanpa login) cuma bisa **baca**. Semua aturan di atas dijaga database 
 | Daftarin fighter, upload foto, isi gaya bertarung, tandai sudah bayar | Finance Registration | `/admin` → Pendaftaran |
 | Generate bracket (setelah pendaftaran ditutup) | Superadmin | `/admin` → Bracket → **Generate bracket** |
 | Catat taruhan sebelum fight mulai, kasih **kode slip** ke bettor | Finance Betting | `/admin` → Taruhan (atau klik fight-nya di Meja taruhan halaman penonton) |
-| Panggil fight ke ring (poster) | Bracket Coordinator / MC | `/admin` → Bracket → centang **Tampil hari ini** |
+| Tampilkan fight minggu ini (poster) | Bracket Coordinator / MC | `/admin` → Bracket → centang **Tampil minggu ini** |
 | **Mulai fight** → status LIVE, taruhan otomatis ditutup | Referee / MC | `/admin` → Bracket → **Mulai fight** |
 | Pilih **cara menang**, lalu klik **Menang** di fighter yang menang | Referee | `/admin` → Bracket |
 | Bayar bettor yang menang, centang "Sudah dibayar" | Finance Betting | `/admin` → Taruhan |
@@ -112,8 +113,14 @@ Catatan:
 ## Turnamen & arsip
 
 - Selalu ada satu turnamen yang "jalan". Namanya diatur di `/admin` → **Turnamen**, dan tampil di papan Juara serta arsip.
-- **Mulai turnamen baru** menutup turnamen sekarang dan memindahkannya ke arsip: hasil, catatan fight, dan juaranya tetap tersimpan dan tampil di halaman penonton ("Juara turnamen sebelumnya" + filter turnamen di Fight history). Bracket baru mulai kosong, fighter tetap terdaftar.
+- **Mulai turnamen baru** menutup turnamen sekarang dan memindahkannya ke arsip: hasil, catatan fight, dan juaranya tetap tersimpan dan tampil di halaman penonton ("Juara turnamen sebelumnya" + filter turnamen di Fight history). Bracket dan daftar sponsor baru mulai kosong, fighter tetap terdaftar.
 - Arsip fight (`fight_history`) diisi database sendiri tiap hasil resmi masuk. Nama fighter disalin ke situ, jadi catatan tetap kebaca walau fighter-nya dihapus.
+
+## Sponsor
+
+- Superadmin: `/admin` → **Sponsor** → isi **nama**, **jumlah sponsor** (¥), dan **foto / logo** (opsional, maks 5 MB). Bisa diedit, ganti foto, atau dihapus kapan aja.
+- Halaman penonton nampilin bagian **Sponsor** (sebelum Aturan): tiap sponsor jadi flyer kecil berisi foto, nama, dan jumlahnya, urut dari jumlah terbesar, plus total semua sponsor. Bagian ini baru muncul begitu ada sponsor pertama.
+- Sponsor nempel ke turnamen yang lagi jalan. **Mulai turnamen baru** → daftar sponsor mulai kosong lagi.
 
 ## Sistem taruhan (mata uang RP, bukan uang asli)
 
@@ -122,6 +129,10 @@ Catatan:
 - Kalau gak ada yang taruh ke fighter yang menang, seluruh uang pihak kalah masuk kas panitia.
 - Pecahan Yen dibulatkan ke bawah ke bettor; sisanya masuk kas panitia.
 - Status taruhan per fight: **Betting open** → **Betting closed** (fight mulai / ditutup panitia / fight batal) → **Settled** (hasil masuk).
+- Di `/admin` → **Taruhan**, tiap taruhan punya tiga kolom ini (penjelasannya juga ada di bawah tabel):
+  - **Status**: **Menunggu** (fight belum selesai), **Menang**, **Kalah** (gak dapat apa-apa), atau **Batal** (fight dibatalkan / jagoannya udah gak ada di fight itu, taruhan balik utuh).
+  - **Payout**: jumlah Yen yang harus ditransfer ke rekening / Yentag bettor. "-" = gak ada yang perlu ditransfer.
+  - **Dibayar**: dicentang setelah payout beneran ditransfer. **Belum** = masih utang ke bettor (masuk hitungan "Belum dibayar ke bettor"), **Sudah** = beres. Bettor lihat "Udah ditransfer" / "Belum ditransfer" lewat kode slip.
 - Tiap taruhan punya **kode slip** (`TX-XXXXXXXX`). Bettor bisa ngecek taruhannya sendiri di halaman penonton tanpa login: status, payout, udah ditransfer atau belum. Nama dan nominal orang lain gak pernah tampil ke publik.
 - Yang dicegah database: nominal 0 / minus / kelewat besar, taruhan dobel (klik dua kali atau kirim ulang), taruhan ke fight yang udah mulai / selesai / batal / ditutup, dan jagoan yang bukan fighter di fight itu.
 - Semua transaksi (dicatat, diubah, dibayar, dihapus, siapa yang ngelakuin) masuk **Riwayat transaksi** dan gak bisa diedit.
@@ -130,7 +141,7 @@ Catatan:
 ## Foto
 
 - Foto disimpan di Supabase Storage (bucket `photos`), maks 5 MB per file.
-- Foto **diganti**, **dihapus**, atau fighter-nya **dihapus** → file fotonya ikut dihapus dari storage, gak numpuk.
+- Foto **diganti**, **dihapus**, atau fighter / sponsor-nya **dihapus** → file fotonya ikut dihapus dari storage, gak numpuk.
 - Kalau pendaftaran gagal (misal nama dobel), foto yang terlanjur ke-upload langsung dibuang.
 - Jaga-jaga (superadmin): `/admin` → Pengaturan → **Cari & hapus foto nganggur** buat bersihin file yang gak dipakai siapa pun.
 
@@ -154,6 +165,7 @@ Catatan:
 | `fight_history` | Catatan resmi tiap fight yang selesai (diisi otomatis) |
 | `bets` | Taruhan: bettor, jagoan, nominal, status bayar |
 | `bet_log` | Riwayat semua transaksi taruhan (diisi otomatis) |
+| `sponsors` | Sponsor per turnamen: nama, foto, jumlah |
 | `admin_accounts` | Akun panitia + role |
 
 Total fight, menang, kalah, win rate, status "Gugur" / "Juara", dan total pool **dihitung** dari tabel di atas (`lib/fight.ts`, `lib/betting.ts`), gak disimpan sebagai angka terpisah, jadi gak mungkin gak sinkron.

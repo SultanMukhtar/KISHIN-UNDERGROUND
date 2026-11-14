@@ -11,6 +11,7 @@ import BracketTab from "@/components/admin/BracketTab";
 import BettingTab from "@/components/admin/BettingTab";
 import ArchiveTab from "@/components/admin/ArchiveTab";
 import TournamentTab from "@/components/admin/TournamentTab";
+import SponsorsTab from "@/components/admin/SponsorsTab";
 import SettingsTab from "@/components/admin/SettingsTab";
 import AccountsTab from "@/components/admin/AccountsTab";
 import { BrandMark } from "@/components/site/SiteChrome";
@@ -22,6 +23,7 @@ const TABS = [
   { key: "betting", label: "Taruhan", superOnly: false },
   { key: "archive", label: "Arsip", superOnly: false },
   { key: "tournament", label: "Turnamen", superOnly: true },
+  { key: "sponsors", label: "Sponsor", superOnly: true },
   { key: "settings", label: "Pengaturan", superOnly: true },
   { key: "accounts", label: "Akun Admin", superOnly: true },
 ] as const;
@@ -176,7 +178,8 @@ function Dashboard({ me }: { me: Me }) {
   const tabs = TABS.filter((t) => isSuper || !t.superOnly);
   const [tab, setTab] = useState<TabKey>("fighters");
   const [data, setData] = useState<AdminData>({
-    settings: null, fighters: [], matches: [], bets: [], betLog: [], tournaments: [], tournament: null, history: null, schemaReady: true,
+    settings: null, fighters: [], matches: [], bets: [], betLog: [], tournaments: [], tournament: null, history: null,
+    sponsors: [], sponsorsReady: true, schemaReady: true,
   });
   const [loaded, setLoaded] = useState(false);
   const [msg, setMsg] = useState<{ text: string; err?: boolean } | null>(null);
@@ -226,6 +229,7 @@ function Dashboard({ me }: { me: Me }) {
     bracket: playable.length ? `${playable.filter((m) => m.winner_id).length}/${playable.length}` : undefined,
     betting: data.bets.length ? String(data.bets.length) : undefined,
     archive: data.history?.length ? String(data.history.length) : undefined,
+    sponsors: data.sponsors.length ? String(data.sponsors.length) : undefined,
   };
   const hints: Record<TabKey, string> = {
     fighters: "Daftarin fighter, upload fotonya, terus tandai yang udah bayar.",
@@ -235,6 +239,7 @@ function Dashboard({ me }: { me: Me }) {
     betting: "Catat taruhan sebelum fight mulai. Setelah fight selesai, transfer payout lalu tandai Sudah dibayar.",
     archive: "Catatan resmi semua fight yang udah selesai. Keisi sendiri tiap hasil dimasukin.",
     tournament: "Ganti nama turnamen, tutup turnamen yang jalan, dan mulai yang baru.",
+    sponsors: "Sponsor turnamen yang lagi jalan. Nama, foto, dan jumlah sponsornya tampil di halaman penonton.",
     settings: "Foto hero, nama event, tagline, biaya daftar, dan house cut default.",
     accounts: "Tambah, hapus, atau ganti password akun panitia.",
   };
@@ -282,6 +287,7 @@ function Dashboard({ me }: { me: Me }) {
         {tab === "betting" && <BettingTab {...props} />}
         {tab === "archive" && <ArchiveTab {...props} />}
         {tab === "tournament" && isSuper && <TournamentTab {...props} />}
+        {tab === "sponsors" && isSuper && <SponsorsTab {...props} />}
         {tab === "settings" && isSuper && <SettingsTab {...props} />}
         {tab === "accounts" && isSuper && <AccountsTab {...props} />}
       </main>

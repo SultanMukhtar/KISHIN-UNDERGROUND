@@ -83,6 +83,16 @@ export type HistoryRow = {
   completed_at: string | null; // null = tanggal gak dicatat (Vol. 1)
 };
 
+/** Sponsor turnamen: nama, foto/logo, dan jumlah sponsornya. Tampil di halaman penonton. */
+export type Sponsor = {
+  id: string;
+  tournament_id: string | null;
+  name: string;
+  amount: number;
+  photo_url: string | null;
+  created_at: string;
+};
+
 export type Bet = {
   id: string;
   match_id: string;

@@ -167,7 +167,7 @@ export default function BracketTab({ me, data, reload, notify }: TabProps) {
 
       {featuredCount > 0 && (
         <div className="row-actions" style={{ marginTop: 12 }}>
-          <button className="btn ghost" onClick={clearFeatured} disabled={busy}>Lepas semua poster &quot;Tampil hari ini&quot; ({featuredCount})</button>
+          <button className="btn ghost" onClick={clearFeatured} disabled={busy}>Lepas semua poster &quot;Tampil minggu ini&quot; ({featuredCount})</button>
         </div>
       )}
 
@@ -325,7 +325,7 @@ function MatchCard({ m, byId, busy, isSuper, schemaReady, paid, patch, setWinner
 
       {ready && (
         <label className="check" style={{ marginTop: 4 }}>
-          <input type="checkbox" checked={m.featured} disabled={busy} onChange={() => patch(m, { featured: !m.featured })} /> Tampil hari ini (poster di Lagi di ring)
+          <input type="checkbox" checked={m.featured} disabled={busy} onChange={() => patch(m, { featured: !m.featured })} /> Tampil minggu ini (poster di Lagi di ring)
         </label>
       )}
       {m.kind === "extra" && isSuper && (

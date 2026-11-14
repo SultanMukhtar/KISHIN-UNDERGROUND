@@ -5,6 +5,7 @@ import { EMPTY_PUBLIC, loadPublic, type PublicData } from "@/lib/data";
 import { podium, roundLabel, stageKey, totalRounds } from "@/lib/bracket";
 import { METHOD_SHORT, buildRecords, fighterStats, isBye, isReady, matchCode, statusOf, waitingFor, type FightRecord } from "@/lib/fight";
 import { useStaff } from "@/lib/staff";
+import { yen } from "@/lib/betting";
 import type { Match } from "@/lib/types";
 import Loader from "@/components/site/Loader";
 import Hero from "@/components/site/Hero";
@@ -15,6 +16,7 @@ import BettingBoard from "@/components/site/BettingBoard";
 import BetPanel from "@/components/site/BetPanel";
 import FightHistory from "@/components/site/FightHistory";
 import Podium from "@/components/site/Podium";
+import Sponsors from "@/components/site/Sponsors";
 import Rules from "@/components/site/Rules";
 import FighterDossier from "@/components/site/FighterDossier";
 import MatchSheet, { type SheetData } from "@/components/site/MatchSheet";
@@ -68,6 +70,9 @@ export default function SpectatorPage() {
           .on("postgres_changes", { event: "*", schema: "public", table: "tournaments" }, soon)
           .on("postgres_changes", { event: "*", schema: "public", table: "fight_history" }, soon)
           .subscribe(),
+        c.channel("public-sponsors")
+          .on("postgres_changes", { event: "*", schema: "public", table: "sponsors" }, soon)
+          .subscribe(),
       );
     } catch {}
     return () => {
@@ -78,7 +83,8 @@ export default function SpectatorPage() {
     };
   }, [load]);
 
-  const { settings, fighters, matches, pools, tournaments, tournament, history } = data;
+  const { settings, fighters, matches, pools, tournaments, tournament, history, sponsors } = data;
+  const sponsorTotal = sponsors.reduce((s, x) => s + x.amount, 0);
   const byId = useMemo(() => new Map(fighters.map((f) => [f.id, f])), [fighters]);
   const poolOf = useMemo(() => new Map(pools.map((p) => [p.match_id, p])), [pools]);
   const total = totalRounds(matches);
@@ -188,6 +194,7 @@ export default function SpectatorPage() {
     { id: "taruhan", label: "Taruhan" },
     { id: "arsip", label: "Arsip" },
     ...(!decided ? [{ id: "juara", label: "Juara" }] : []),
+    ...(sponsors.length ? [{ id: "sponsor", label: "Sponsor" }] : []),
     { id: "aturan", label: "Aturan" },
   ];
 
@@ -247,6 +254,20 @@ export default function SpectatorPage() {
           </section>
 
           {!decided && champions}
+
+          {sponsors.length > 0 && (
+            <section className="block block-sponsors" data-spy="sponsor" aria-labelledby="sponsor">
+              <div className="wrap">
+                <SectionTitle
+                  id="sponsor"
+                  aside={sponsorTotal > 0 ? `Total ${yen(sponsorTotal)} dari ${sponsors.length} sponsor.` : `${sponsors.length} sponsor turnamen ini.`}
+                >
+                  Sponsor
+                </SectionTitle>
+                <Sponsors sponsors={sponsors} />
+              </div>
+            </section>
+          )}
 
           <section className="block block-rules" data-spy="aturan" aria-labelledby="aturan">
             <div className="wrap">

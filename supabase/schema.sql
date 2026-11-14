@@ -11,6 +11,7 @@
 --   fight_history   catatan resmi tiap fight yang selesai (diisi otomatis)
 --   bets            taruhan mata uang RP (virtual), cuma panitia
 --   bet_log         riwayat semua transaksi taruhan (diisi otomatis)
+--   sponsors        sponsor turnamen: nama, foto, jumlah (tampil di halaman penonton)
 --   admin_accounts  akun panitia + role
 -- =========================================================
 
@@ -76,14 +77,14 @@ create table if not exists matches (
   fighter1_id uuid references fighters(id) on delete set null,
   fighter2_id uuid references fighters(id) on delete set null,
   winner_id uuid references fighters(id) on delete set null,
-  featured boolean not null default false,   -- "Tampil Hari Ini"
+  featured boolean not null default false,   -- "Tampil minggu ini"
   house_cut numeric not null default 0.2 check (house_cut >= 0 and house_cut < 1),
   created_at timestamptz not null default now(),
   unique (kind, round, slot)
 );
 
 -- Kolom status dibuat lewat blok ini supaya match lama dapat status yang cocok SEKALI aja:
--- yang udah ada pemenangnya = selesai, yang lagi "tampil hari ini" = live.
+-- yang udah ada pemenangnya = selesai, yang lagi "tampil minggu ini" = live.
 do $$
 begin
   if not exists (select 1 from information_schema.columns
@@ -176,6 +177,19 @@ create table if not exists bet_log (
 );
 create index if not exists bet_log_match_idx on bet_log(match_id, created_at desc);
 
+-- ---------- SPONSOR ----------
+-- Nama, foto/logo, dan jumlah sponsornya tampil di halaman penonton. Cuma superadmin yang ngelola.
+-- Nempel ke turnamen: turnamen baru mulai dengan daftar sponsor kosong, sponsor lama ikut arsip.
+create table if not exists sponsors (
+  id uuid primary key default gen_random_uuid(),
+  tournament_id uuid references tournaments(id) on delete cascade,
+  name text not null check (char_length(btrim(name)) between 1 and 60),
+  amount int not null default 0 check (amount >= 0 and amount <= 1000000000),   -- Yen (mata uang RP)
+  photo_url text,
+  created_at timestamptz not null default now()
+);
+create index if not exists sponsors_tournament_idx on sponsors(tournament_id);
+
 -- ---------- TOTAL POOL PER MATCH (aman buat publik, tanpa nama bettor) ----------
 drop view if exists match_pools;
 create view match_pools as
@@ -192,7 +206,7 @@ group by m.id;
 -- =========================================================
 -- AKUN ADMIN
 -- role 'superadmin' (cuma boleh 1): semua operasional + generate bracket + turnamen + house cut
---                                   + untung kas + pengaturan + kelola akun admin
+--                                   + untung kas + sponsor + pengaturan + kelola akun admin
 -- role 'admin'                     : pendaftaran, status fight, hasil resmi, catat taruhan
 -- Akun dibuat/dihapus lewat panel /admin (server), bukan dari SQL.
 -- =========================================================
@@ -587,6 +601,7 @@ alter table bets          enable row level security;
 alter table tournaments   enable row level security;
 alter table fight_history enable row level security;
 alter table bet_log       enable row level security;
+alter table sponsors      enable row level security;
 
 drop policy if exists "public read settings"     on settings;
 drop policy if exists "admin all settings"       on settings;
@@ -604,13 +619,15 @@ drop policy if exists "superadmin update tournaments" on tournaments;
 drop policy if exists "superadmin delete tournaments" on tournaments;
 drop policy if exists "public read fight_history"     on fight_history;
 drop policy if exists "admin read bet_log"            on bet_log;
+drop policy if exists "public read sponsors"          on sponsors;
+drop policy if exists "superadmin all sponsors"       on sponsors;
 
 create policy "public read settings"     on settings for select to anon, authenticated using (true);
 create policy "superadmin edit settings" on settings for update to authenticated using (is_superadmin()) with check (is_superadmin());
 create policy "public read fighters"     on fighters for select to anon, authenticated using (true);
 create policy "admin all fighters"       on fighters for all to authenticated using (is_admin()) with check (is_admin());
 create policy "public read matches"      on matches  for select to anon, authenticated using (true);
--- Admin cuma boleh UPDATE match (status, hasil resmi, "tampil hari ini").
+-- Admin cuma boleh UPDATE match (status, hasil resmi, "tampil minggu ini").
 -- Bikin / hapus match (generate bracket, laga tambahan) cuma superadmin.
 create policy "admin update matches"      on matches for update to authenticated using (is_admin()) with check (is_admin());
 create policy "superadmin insert matches" on matches for insert to authenticated with check (is_superadmin());
@@ -635,6 +652,10 @@ revoke insert, update, delete on fight_history from anon, authenticated;
 create policy "admin read bet_log" on bet_log for select to authenticated using (is_admin());
 revoke insert, update, delete on bet_log from anon, authenticated;
 
+-- Sponsor: semua bisa baca (tampil di halaman penonton). Tambah / ubah / hapus cuma superadmin.
+create policy "public read sponsors"    on sponsors for select to anon, authenticated using (true);
+create policy "superadmin all sponsors" on sponsors for all to authenticated using (is_superadmin()) with check (is_superadmin());
+
 -- Penonton cuma boleh lihat kolom fighter yang aman (status bayar, fee, catatan disembunyikan)
 revoke select on fighters from anon;
 grant select (id, name, group_name, photo_url, fighting_style, status) on fighters to anon;
@@ -650,6 +671,7 @@ begin
   begin alter publication supabase_realtime add table settings;      exception when duplicate_object then null; end;
   begin alter publication supabase_realtime add table tournaments;   exception when duplicate_object then null; end;
   begin alter publication supabase_realtime add table fight_history; exception when duplicate_object then null; end;
+  begin alter publication supabase_realtime add table sponsors;      exception when duplicate_object then null; end;
   -- bets: cuma admin yang nerima (RLS), panel admin lain langsung update.
   -- fighters sengaja TIDAK dimasukkan (kolom bayar/fee/catatan rahasia); panel admin polling tiap 10 detik.
   begin alter publication supabase_realtime add table bets;          exception when duplicate_object then null; end;
@@ -657,7 +679,7 @@ end $$;
 
 -- =========================================================
 -- STORAGE FOTO, maks 5 MB per file
--- fighters/ → semua admin, hero/ → cuma superadmin
+-- fighters/ → semua admin, hero/ & sponsors/ → cuma superadmin
 -- =========================================================
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('photos', 'photos', true, 5242880, array['image/jpeg','image/png','image/webp','image/gif'])

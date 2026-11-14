@@ -40,7 +40,7 @@ export async function deletePhoto(url: string | null | undefined): Promise<void>
   if (error) console.warn("Gagal hapus foto lama:", error.message);
 }
 
-export async function uploadPhoto(file: File, folder: "fighters" | "hero"): Promise<string> {
+export async function uploadPhoto(file: File, folder: "fighters" | "hero" | "sponsors"): Promise<string> {
   if (file.size > 5 * 1024 * 1024) throw new Error("Ukuran foto maksimal 5 MB.");
   const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
   const path = `${folder}/${crypto.randomUUID()}.${ext}`;

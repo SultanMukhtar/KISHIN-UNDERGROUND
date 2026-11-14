@@ -39,7 +39,7 @@ export default function TournamentTab({ data, reload, notify }: TabProps) {
     const unfinished = matches.some((m) => !m.winner_id && m.fighter1_id && m.fighter2_id);
     const warn =
       `Mulai turnamen baru "${v}"?\n\n` +
-      `"${tournament?.name ?? "Turnamen sekarang"}" ditutup dan masuk arsip. Hasil, catatan fight, dan juaranya tetap tersimpan.` +
+      `"${tournament?.name ?? "Turnamen sekarang"}" ditutup dan masuk arsip. Hasil, catatan fight, dan juaranya tetap tersimpan. Daftar sponsor turnamen baru mulai kosong.` +
       (unfinished ? "\n\nMasih ada fight yang belum selesai di turnamen sekarang. Fight itu gak bakal dilanjutin." : "") +
       (resetPaid ? "\n\nStatus bayar semua fighter di-reset jadi Belum bayar." : "");
     if (!confirm(warn)) return;
@@ -62,7 +62,7 @@ export default function TournamentTab({ data, reload, notify }: TabProps) {
   }
 
   async function remove(t: Tournament) {
-    if (!confirm(`Hapus arsip turnamen "${t.name}"? Semua match, taruhan, dan catatan fight turnamen itu ikut terhapus permanen.`)) return;
+    if (!confirm(`Hapus arsip turnamen "${t.name}"? Semua match, taruhan, catatan fight, dan sponsor turnamen itu ikut terhapus permanen.`)) return;
     setBusy(true);
     const { error } = await sb().from("tournaments").delete().eq("id", t.id);
     if (error) notify(error.message, true);
@@ -99,7 +99,7 @@ export default function TournamentTab({ data, reload, notify }: TabProps) {
       <form className="card" onSubmit={start}>
         <h3>Mulai turnamen baru</h3>
         <p style={{ fontSize: 13, color: "var(--muted)", marginTop: 0 }}>
-          Turnamen sekarang ditutup dan masuk arsip (hasil dan juaranya tetap tersimpan). Bracket baru mulai kosong, fighter tetap terdaftar.
+          Turnamen sekarang ditutup dan masuk arsip (hasil dan juaranya tetap tersimpan). Bracket dan daftar sponsor baru mulai kosong, fighter tetap terdaftar.
         </p>
         <div className="form-grid">
           <label className="f">Nama turnamen baru<input type="text" value={next} maxLength={80} onChange={(e) => setNext(e.target.value)} placeholder="misal Underground Fight Vol. 2" required /></label>
