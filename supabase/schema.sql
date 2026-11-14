@@ -139,6 +139,8 @@ create table if not exists fight_history (
   duration_sec int,
   completed_at timestamptz not null default now()
 );
+-- boleh kosong: fight lama yang tanggalnya gak dicatat (Vol. 1). Fight baru tetap diisi otomatis oleh trigger.
+alter table fight_history alter column completed_at drop not null;
 create index if not exists fight_history_completed_idx on fight_history(completed_at desc);
 
 -- ---------- TARUHAN (mata uang RP, bukan uang asli) ----------

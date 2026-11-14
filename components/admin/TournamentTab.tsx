@@ -115,7 +115,7 @@ export default function TournamentTab({ data, reload, notify }: TabProps) {
         ) : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Turnamen</th><th>Juara 1</th><th>Juara 2</th><th>Juara 3</th><th>Mulai</th><th></th></tr></thead>
+              <thead><tr><th>Turnamen</th><th>Juara 1</th><th>Juara 2</th><th>Juara 3</th><th>Selesai</th><th></th></tr></thead>
               <tbody>
                 {archived.map((t) => (
                   <tr key={t.id}>
@@ -123,7 +123,7 @@ export default function TournamentTab({ data, reload, notify }: TabProps) {
                     <td>{t.champion_name ?? "-"}</td>
                     <td>{t.runner_up_name ?? "-"}</td>
                     <td>{t.third_name ?? "-"}</td>
-                    <td style={{ whiteSpace: "nowrap" }}>{fmtDate(t.created_at) ?? "-"}</td>
+                    <td style={{ whiteSpace: "nowrap" }}>{fmtDate(t.completed_at) ?? "-"}</td>
                     <td>
                       <div className="row-actions" style={{ flexWrap: "nowrap" }}>
                         <button className="btn ghost sm" disabled={busy} onClick={() => { const v = prompt("Nama baru turnamen:", t.name); if (v) rename(t, v); }}>Ganti nama</button>

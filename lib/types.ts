@@ -83,7 +83,7 @@ export type HistoryRow = {
   winner_name: string;
   result_method: ResultMethod | null;
   duration_sec: number | null;
-  completed_at: string;
+  completed_at: string | null; // null = tanggal gak dicatat (Vol. 1)
 };
 
 export type Bet = {
