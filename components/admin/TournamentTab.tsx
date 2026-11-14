@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import EditModal from "@/components/admin/EditModal";
-import { sb } from "@/lib/supabase";
+import { deletePhoto, sb } from "@/lib/supabase";
 import { stageLabel } from "@/lib/bracket";
 import { fmtDate } from "@/lib/fight";
 import type { TabProps } from "@/lib/adminTypes";
@@ -15,6 +15,8 @@ export default function TournamentTab({ data, reload, notify, confirm, go }: Tab
   const [resetPaid, setResetPaid] = useState(false);
   const [busy, setBusy] = useState(false);
   const [renaming, setRenaming] = useState<Tournament | null>(null);
+  const [resetPaidNow, setResetPaidNow] = useState(false);
+  const [clearSponsors, setClearSponsors] = useState(false);
   const archived = tournaments.filter((t) => t.id !== tournament?.id);
 
   useEffect(() => { setName(tournament?.name ?? ""); }, [tournament?.id, tournament?.name]);
@@ -91,6 +93,44 @@ export default function TournamentTab({ data, reload, notify, confirm, go }: Tab
     setBusy(false);
   }
 
+  /** Kosongin turnamen yang lagi jalan dan mulai lagi dari awal (nama turnamen & fighter tetap). */
+  async function resetCurrent(e: React.FormEvent) {
+    e.preventDefault();
+    if (!tournament || busy) return;
+    const results = matches.filter((m) => m.winner_id && m.fighter1_id && m.fighter2_id).length;
+    const paidCount = fighters.filter((f) => f.paid).length;
+    const ok = await confirm({
+      title: `Reset ${tournament.name}?`,
+      body: <>Isi turnamen ini dikosongin dan mulai lagi dari awal. Nama turnamen, daftar fighter, dan arsip turnamen lain tetap.</>,
+      points: [
+        `${matches.length} match (bracket + laga tambahan) dihapus.`,
+        ...(bets.length ? [`${bets.length} taruhan dan riwayat transaksinya dihapus. Uang yang udah masuk harus dikembalikan manual.`] : []),
+        ...(results ? [`${results} hasil fight hilang dari arsip dan rekor fighter.`] : []),
+        clearSponsors ? `${sponsors.length} sponsor turnamen ini dihapus.` : "Sponsor tetap.",
+        resetPaidNow ? `Status bayar ${paidCount} fighter di-reset jadi belum bayar.` : "Status bayar fighter gak berubah.",
+        "Gak bisa dibatalin.",
+      ],
+      confirmLabel: "Reset turnamen",
+      tone: "danger",
+      typeToConfirm: "RESET",
+    });
+    if (!ok) return;
+    setBusy(true);
+    const photos = clearSponsors ? sponsors.map((s) => s.photo_url) : [];
+    const { error } = await sb().rpc("reset_tournament", { p_reset_paid: resetPaidNow, p_clear_sponsors: clearSponsors });
+    if (error) {
+      notify("Reset gagal: " + error.message, true);
+    } else {
+      for (const p of photos) await deletePhoto(p); // logo sponsor yang dihapus ikut dibuang dari storage
+      setResetPaidNow(false);
+      setClearSponsors(false);
+      notify(`${tournament.name} di-reset. Mulai lagi dari buat bracket.`);
+    }
+    await reload();
+    setBusy(false);
+    if (!error) go("bracket");
+  }
+
   async function remove(t: Tournament) {
     const records = (data.history ?? []).filter((h) => h.tournament_id === t.id && h.match_id).length;
     const ok = await confirm({
@@ -130,6 +170,19 @@ export default function TournamentTab({ data, reload, notify, confirm, go }: Tab
             <div className="form-grid settings-actions">
               <label className="f">Nama turnamen<input type="text" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} required /></label>
               <button className="btn" disabled={busy || !name.trim() || name.trim() === tournament.name}>Simpan nama</button>
+            </div>
+          </form>
+
+          <form className="card" onSubmit={resetCurrent}>
+            <h3>Reset turnamen yang lagi jalan</h3>
+            <p className="hint">
+              Ngosongin bracket, laga tambahan, taruhan, dan catatan fight {tournament.name}, lalu mulai lagi dari awal.
+              Nama turnamen, fighter, dan arsip turnamen lain gak kesentuh.
+            </p>
+            <div className="form-grid settings-actions">
+              <label className="check"><input type="checkbox" checked={resetPaidNow} onChange={(e) => setResetPaidNow(e.target.checked)} /> Reset status bayar fighter</label>
+              <label className="check"><input type="checkbox" checked={clearSponsors} onChange={(e) => setClearSponsors(e.target.checked)} /> Hapus sponsor turnamen ini</label>
+              <button className="btn danger" disabled={busy}>Reset turnamen…</button>
             </div>
           </form>
         </>

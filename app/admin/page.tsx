@@ -323,7 +323,8 @@ function Dashboard({ me }: { me: Me }) {
     for (const m of live) {
       now.push({ key: "live" + m.id, tone: "live", text: `Fight ${matchCode(m.match_no)} lagi jalan: ${name(m.fighter1_id)} lawan ${name(m.fighter2_id)}`, action: "Catat hasil", tab: "bracket", intent: { matchId: m.id } });
     }
-    if (slips) now.push({ key: "owed", tone: "warn", text: `${slips} taruhan menang belum dibayar, total ${yen(owed)}`, action: "Bayar", tab: "betting", intent: { view: "payouts" } });
+    // tandai dibayar cuma superadmin; admin lain cukup lihat daftarnya
+    if (slips) now.push({ key: "owed", tone: "warn", text: `${slips} taruhan menang belum dibayar, total ${yen(owed)}`, action: isSuper ? "Bayar" : "Lihat", tab: "betting", intent: { view: "payouts" } });
     if (isSuper && data.schemaReady && !data.matches.length && paid >= 2) {
       now.push({ key: "nobracket", tone: "todo", text: `Bracket belum dibuat. ${paid} fighter udah bayar.`, action: "Buat bracket", tab: "bracket" });
     }

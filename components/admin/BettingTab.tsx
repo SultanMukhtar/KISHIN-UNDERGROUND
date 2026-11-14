@@ -168,8 +168,11 @@ export default function BettingTab({ me, data, reload, notify, confirm, go, inte
   const shownBets = cur ? cur.bets.filter((b) => !needle || b.bettor_name.toLowerCase().includes(needle) || slipCode(b.id).toLowerCase().includes(needle) || (b.bettor_account ?? "").toLowerCase().includes(needle)) : [];
   const canRemove = selected ? !selected.winner_id && statusOf(selected) !== "cancelled" : false;
 
+  // tandai dibayar cuma superadmin (dijaga juga di database); admin cuma lihat statusnya
   const payCell = (b: Bet, r: BetOutcome) =>
-    r.payout > 0 ? (
+    r.payout > 0 && !isSuper ? (
+      b.paid_out ? <span className="paid-tag">Dibayar</span> : <span className="muted">Belum dibayar</span>
+    ) : r.payout > 0 ? (
       b.paid_out ? (
         <span className="paid-cell">
           <span className="paid-tag">Dibayar</span>
@@ -196,6 +199,8 @@ export default function BettingTab({ me, data, reload, notify, confirm, go, inte
           Belum dibayar{owed.length ? ` (${owed.length})` : ""}
         </button>
       </div>
+
+      {!isSuper && <p className="hint-inline">Yang bisa nandain taruhan udah dibayar cuma superadmin.</p>}
 
       {view === "payouts" ? (
         owed.length === 0 ? (

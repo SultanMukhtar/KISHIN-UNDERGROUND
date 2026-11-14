@@ -471,6 +471,18 @@ language plpgsql set search_path = public as $$
 declare
   m matches%rowtype;
 begin
+  -- Tandai dibayar / batal dibayar cuma superadmin. (auth.uid() kosong = SQL Editor / server, tetap boleh.)
+  if auth.uid() is not null and not is_superadmin() then
+    if tg_op = 'INSERT' and new.paid_out then
+      raise exception 'Cuma superadmin yang boleh nandain taruhan udah dibayar.';
+    end if;
+    if tg_op = 'UPDATE' then
+      if new.paid_out is distinct from old.paid_out then
+        raise exception 'Cuma superadmin yang boleh nandain taruhan udah dibayar.';
+      end if;
+    end if;
+  end if;
+
   if tg_op = 'UPDATE'
      and new.match_id is not distinct from old.match_id
      and new.fighter_id is not distinct from old.fighter_id
@@ -583,6 +595,31 @@ begin
 end $$;
 revoke all on function start_tournament(text) from public;
 grant execute on function start_tournament(text) to authenticated;
+
+-- Superadmin: kosongin turnamen yang lagi jalan, mulai lagi dari awal (semuanya sekali jalan, gak bisa setengah).
+-- Dihapus: bracket + laga tambahan, taruhan + riwayat transaksinya, catatan fight turnamen ini.
+-- Tetap: nama turnamen, fighter, arsip turnamen lain. Opsional: reset status bayar fighter, hapus sponsor turnamen ini.
+create or replace function reset_tournament(p_reset_paid boolean default false, p_clear_sponsors boolean default false) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  tid uuid;
+  ids uuid[];
+begin
+  if not is_superadmin() then raise exception 'Cuma superadmin yang boleh reset turnamen.'; end if;
+  select current_tournament_id into tid from settings where id = 1;
+  if tid is null then raise exception 'Belum ada turnamen yang jalan.'; end if;
+
+  select coalesce(array_agg(id), '{}') into ids from matches where tournament_id = tid;
+  delete from bets where match_id = any(ids);       -- dulu: hapus taruhan otomatis nyatat "dihapus" ke bet_log
+  delete from bet_log where match_id = any(ids);    -- baru riwayat transaksinya dikosongin
+  delete from fight_history where tournament_id = tid;
+  delete from matches where tournament_id = tid;
+  if p_clear_sponsors then delete from sponsors where tournament_id = tid; end if;
+  if p_reset_paid then update fighters set paid = false, fee = 0 where paid; end if;
+  perform refresh_tournament(tid);                   -- babak & podium balik kosong
+end $$;
+revoke all on function reset_tournament(boolean, boolean) from public;
+grant execute on function reset_tournament(boolean, boolean) to authenticated;
 
 -- =========================================================
 -- DATA LAMA → STRUKTUR BARU (jalan sekali, aman diulang)

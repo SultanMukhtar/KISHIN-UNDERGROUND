@@ -72,10 +72,11 @@ Setelah itu form ini hilang selamanya dan `/admin` jadi halaman login biasa (**u
 | Pendaftaran, edit profil fighter, upload foto | ✓ | ✓ |
 | Mulai / tunda / batalkan fight, "Tampil minggu ini" | ✓ | ✓ |
 | Isi hasil resmi (pemenang, cara menang) | ✓ | ✓ |
-| Catat taruhan, tutup / buka taruhan, tandai payout dibayar | ✓ | ✓ |
+| Catat taruhan, tutup / buka taruhan | ✓ | ✓ |
+| Tandai taruhan udah dibayar / batal dibayar | ✓ | – |
 | Lihat arsip fight & riwayat transaksi taruhan | ✓ | ✓ |
 | Generate / buat ulang bracket, ganti isi slot ronde 1, laga tambahan | ✓ | – |
-| Turnamen: ganti nama, mulai turnamen baru, hapus arsip turnamen | ✓ | – |
+| Turnamen: ganti nama, reset turnamen yang lagi jalan, mulai turnamen baru, hapus arsip turnamen | ✓ | – |
 | Sponsor & hadiah: kelola sponsor (nama, foto, jumlah), lihat rincian hadiah juara | ✓ | – |
 | Ubah house cut per match, lihat untung kas | ✓ | – |
 | Pengaturan (hero, biaya daftar, house cut default) | ✓ | – |
@@ -99,7 +100,7 @@ Penonton (tanpa login) cuma bisa **baca**. Semua aturan di atas dijaga database 
 | Tampilkan fight minggu ini (poster) | Bracket Coordinator / MC | `/admin` → Bracket → centang **Tampil minggu ini** |
 | **Mulai fight** → status LIVE, taruhan otomatis ditutup | Referee / MC | `/admin` → Bracket → **Mulai fight** |
 | Pilih **cara menang**, lalu klik **Menang** di fighter yang menang | Referee | `/admin` → Bracket |
-| Bayar bettor yang menang, centang "Sudah dibayar" | Finance Betting | `/admin` → Taruhan |
+| Bayar bettor yang menang, klik "Tandai dibayar" | Superadmin | `/admin` → Taruhan |
 
 Yang terjadi otomatis begitu **Menang** diklik: pemenang maju ke ronde berikutnya, yang kalah di semifinal masuk **Perebutan Juara 3**, catatan fight masuk **Arsip**, rekor fighter (menang / kalah / win rate) ikut berubah, taruhan dihitung, dan halaman penonton nampilin pengumuman hasil + cap WIN / LOSS. Begitu final selesai, papan **Juara** keisi sendiri.
 
