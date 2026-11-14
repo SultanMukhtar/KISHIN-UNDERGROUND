@@ -25,7 +25,7 @@ export type PublicData = {
   history: HistoryRow[] | null;
   /** sponsor turnamen yang lagi jalan, jumlah terbesar dulu */
   sponsors: Sponsor[];
-  /** total uang pendaftaran + sponsor vol ini (bahan hadiah juara). null = database belum punya view prize_pool */
+  /** total uang pendaftaran + sponsor turnamen yang lagi jalan (bahan hadiah juara). null = database belum punya view prize_pool */
   prize: PrizePool | null;
   /** false = supabase/schema.sql versi terbaru belum di-Run */
   schemaReady: boolean;
@@ -37,7 +37,7 @@ export const EMPTY_PUBLIC: PublicData = {
 
 const FIGHTER_COLS = "id,name,group_name,photo_url";
 /** Kolom fighter tambahan buat penonton, dari yang paling baru. Database lama → mundur ke yang ada. */
-const FIGHTER_EXTRA = [",status,tournament_id", ",status", ""];
+const FIGHTER_EXTRA = [",status", ""];
 let fighterLevel = 0;
 /** Tabel turnamen & arsip ada? Di database lama: false, biar gak nembak request gagal tiap 30 detik. */
 let hasArchive = true;
@@ -127,18 +127,16 @@ export type AdminLoad = {
   sponsors: Sponsor[];
   /** false = tabel sponsor belum ada (supabase/schema.sql terbaru belum di-Run) */
   sponsorsReady: boolean;
-  /** true = pendaftaran per vol aktif (kolom fighters.tournament_id udah ada) */
-  perVol: boolean;
   schemaReady: boolean;
+  /** data inti (settings, fighter, match, taruhan) gagal diambil → jangan dipakai, tetap pakai data terakhir */
   error: string | null;
+  /** data pelengkap (turnamen, arsip, log, sponsor) gagal diambil → data inti tetap aman dipakai */
+  warning: string | null;
 };
-
-/** Sekali ketemu kolom pendaftaran per vol, gak perlu dicek lagi. */
-let perVolCol = false;
 
 export async function loadAdmin(): Promise<AdminLoad> {
   const c = sb();
-  const [s, f, m, b, t, h, l, sp, pv] = await Promise.all([
+  const [s, f, m, b, t, h, l, sp] = await Promise.all([
     c.from("settings").select("*").eq("id", 1).maybeSingle(),
     c.from("fighters").select("*").order("created_at"),
     c.from("matches").select("*").order("match_no"),
@@ -147,12 +145,9 @@ export async function loadAdmin(): Promise<AdminLoad> {
     c.from("fight_history").select("*").order("completed_at", { ascending: false }).limit(1000),
     c.from("bet_log").select("*").order("created_at", { ascending: false }).limit(300),
     sponsorsQuery(),
-    // cek ringan: kolom fighters.tournament_id udah ada? (tetap ketahuan walau tabel fighter masih kosong)
-    perVolCol ? { error: null } : c.from("fighters").select("tournament_id").limit(1),
   ]);
-  if (!pv.error) perVolCol = true;
-  const optional = [t.error, h.error, l.error, sp.error, pv.error].find((e) => e && !isMissing(e));
-  const err = s.error || f.error || m.error || b.error || optional || null;
+  const err = s.error || f.error || m.error || b.error || null;
+  const optional = [t.error, h.error, l.error, sp.error].find((e) => e && !isMissing(e)) ?? null;
   const settings = (s.data as Settings | null) ?? null;
   const tournaments = (t.error ? [] : t.data ?? []) as Tournament[];
   const matches = currentMatches((m.data ?? []) as Match[], settings);
@@ -168,8 +163,8 @@ export async function loadAdmin(): Promise<AdminLoad> {
     history: h.error ? null : ((h.data ?? []) as HistoryRow[]),
     sponsors: sp.error ? [] : currentSponsors((sp.data ?? []) as Sponsor[], settings),
     sponsorsReady: !sp.error || !isMissing(sp.error),
-    perVol: perVolCol && !!settings?.current_tournament_id,
     schemaReady: !!settings && "current_tournament_id" in settings,
     error: err ? err.message : null,
+    warning: optional ? optional.message : null,
   };
 }

@@ -7,6 +7,8 @@ type Props = {
   /** id elemen judul di dalam modal */
   labelledBy: string;
   className?: string;
+  /** dipanggil sebelum nutup (Escape, klik di luar, tombol X). false = jangan tutup dulu, misal lagi nyimpan */
+  canClose?: () => boolean;
   children: React.ReactNode;
 };
 
@@ -14,10 +16,12 @@ type Props = {
  * Modal di atas <dialog> bawaan browser: fokus terkurung di dalam, Escape nutup,
  * fokus balik ke tombol yang ngebuka. Masuk: fade + naik skala dikit. Keluar: kebalikannya.
  */
-export default function Modal({ onClose, labelledBy, className = "", children }: Props) {
+export default function Modal({ onClose, labelledBy, className = "", canClose, children }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const downOnBackdrop = useRef(false);
   const closing = useRef(false);
+  const guard = useRef(canClose);
+  guard.current = canClose;
 
   useLayoutEffect(() => {
     const d = ref.current;
@@ -30,6 +34,7 @@ export default function Modal({ onClose, labelledBy, className = "", children }:
   const requestClose = useCallback(() => {
     const d = ref.current;
     if (!d || closing.current) return;
+    if (guard.current && !guard.current()) return;
     closing.current = true;
     const done = () => {
       if (d.open) d.close();

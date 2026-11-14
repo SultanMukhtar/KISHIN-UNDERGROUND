@@ -5,7 +5,7 @@
 --
 -- Isi:
 --   settings        pengaturan event (1 baris) + turnamen yang lagi jalan
---   fighters        fighter + status + pendaftaran per vol (tournament_id, paid, fee)
+--   fighters        fighter + status + status bayar pendaftaran
 --   tournaments     turnamen (yang jalan + arsip) dan podiumnya
 --   matches         bracket & laga tambahan: status, hasil
 --   fight_history   catatan resmi tiap fight yang selesai (diisi otomatis)
@@ -448,6 +448,23 @@ drop trigger if exists fighters_after_rename on fighters;
 create trigger fighters_after_rename after update of name on fighters
   for each row execute function fighters_after_rename();
 
+-- Turnamen ganti nama (yang jalan atau arsip) → nama turnamen di arsip fight ikut diperbarui.
+create or replace function tournaments_after_rename() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.name is distinct from old.name then
+    update fight_history set tournament_name = new.name where tournament_id = new.id;
+  end if;
+  return new;
+end $$;
+drop trigger if exists tournaments_after_rename on tournaments;
+create trigger tournaments_after_rename after update of name on tournaments
+  for each row execute function tournaments_after_rename();
+-- Nama yang terlanjur beda (turnamen yang diganti nama sebelum trigger ini ada) disamain. Aman diulang.
+update fight_history h set tournament_name = t.name
+  from tournaments t
+  where h.tournament_id = t.id and h.tournament_name is distinct from t.name;
+
 -- Taruhan: tolak yang gak valid, dobel, atau masuk setelah taruhan ditutup.
 create or replace function guard_bet() returns trigger
 language plpgsql set search_path = public as $$
@@ -590,27 +607,15 @@ begin
   perform refresh_tournament(tid);
 end $$;
 
--- ---------- PENDAFTARAN PER VOL ----------
--- fighters.tournament_id = vol (turnamen) tempat fighter itu terdaftar; paid & fee berlaku buat vol itu.
--- Turnamen baru → semua fighter otomatis belum terdaftar, tinggal didaftarin ulang (foto & riwayat tetap nyambung).
--- Waktu kolomnya baru dibuat (SEKALI aja), fighter yang udah ada dianggap terdaftar di turnamen yang lagi jalan.
-do $$
-begin
-  if not exists (select 1 from information_schema.columns
-                 where table_schema = 'public' and table_name = 'fighters' and column_name = 'tournament_id') then
-    alter table fighters add column tournament_id uuid references tournaments(id) on delete set null;
-    update fighters set tournament_id = (select current_tournament_id from settings where id = 1);
-  end if;
-end $$;
-create index if not exists fighters_tournament_idx on fighters(tournament_id);
-
 -- ---------- HADIAH JUARA (aman buat publik: cuma total, tanpa nama & status bayar per orang) ----------
--- Uang pendaftaran (fighter yang udah bayar di vol yang lagi jalan) + sponsor vol itu.
+-- Uang pendaftaran (fighter yang udah bayar) + sponsor turnamen yang lagi jalan.
 -- Pembagiannya (potongan kas panitia 30%, juara 1/2/3 = 50/30/20%) dihitung di lib/prize.ts.
 drop view if exists prize_pool;
+-- Pendaftaran per vol sempat dicoba lalu dibatalin: kolomnya dibuang lagi (gak ngapa-ngapain kalau emang gak pernah ada).
+alter table fighters drop column if exists tournament_id;
 create view prize_pool as
 select
-  coalesce((select sum(f.fee) from fighters f where f.paid and f.tournament_id = s.current_tournament_id), 0)::bigint as registration,
+  coalesce((select sum(f.fee) from fighters f where f.paid), 0)::bigint as registration,
   coalesce((select sum(sp.amount) from sponsors sp where sp.tournament_id = s.current_tournament_id), 0)::bigint as sponsors
 from settings s
 where s.id = 1;
@@ -683,7 +688,7 @@ create policy "superadmin all sponsors" on sponsors for all to authenticated usi
 
 -- Penonton cuma boleh lihat kolom fighter yang aman (status bayar, fee, catatan disembunyikan)
 revoke select on fighters from anon;
-grant select (id, name, group_name, photo_url, fighting_style, status, tournament_id) on fighters to anon;
+grant select (id, name, group_name, photo_url, fighting_style, status) on fighters to anon;
 
 grant select on match_pools to anon, authenticated;
 grant select on prize_pool to anon, authenticated;

@@ -21,10 +21,12 @@ type Props = {
   past: Tournament[];
   /** hadiah juara 1–3 dari uang pendaftaran + sponsor. null = belum ada / database lama */
   prize: Prize | null;
+  /** ada sponsor yang nyumbang uang → kata "sponsor" jadi link ke bagian Sponsor */
+  sponsorLink?: boolean;
 };
 
 /** Tiga juara, ditampilin kayak foto tahanan + papan nama. Keisi sendiri dari hasil resmi final. */
-export default function Podium({ first, second, third, winsOf, tournamentName, hasThird, past, prize }: Props) {
+export default function Podium({ first, second, third, winsOf, tournamentName, hasThird, past, prize, sponsorLink = false }: Props) {
   const ui = useUi();
   const slots: { rank: 1 | 2 | 3; f?: Fighter; title: string; wait: string }[] = [
     { rank: 1, f: first, title: "First place", wait: "Menunggu final" },
@@ -72,7 +74,7 @@ export default function Podium({ first, second, third, winsOf, tournamentName, h
       )}
       {prize && (
         <p className="pod-prize">
-          Total hadiah <b>{yen(prize.total)}</b>, dari uang pendaftaran dan sponsor.
+          Total hadiah <b>{yen(prize.total)}</b>, dari uang pendaftaran dan {sponsorLink ? <a href="#sponsor">sponsor</a> : "sponsor"}.
         </p>
       )}
 

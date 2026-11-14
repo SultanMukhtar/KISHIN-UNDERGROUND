@@ -18,9 +18,7 @@ export type Fighter = {
   group_name: string | null;
   photo_url: string | null;
   status?: FighterFlag;
-  /** turnamen (vol) tempat fighter ini terdaftar. null = belum daftar di vol yang jalan. undefined = database lama */
-  tournament_id?: string | null;
-  // kolom di bawah cuma kebaca oleh admin (berlaku buat pendaftaran di vol tournament_id)
+  // kolom di bawah cuma kebaca oleh admin
   paid?: boolean;
   fee?: number;
   notes?: string | null;

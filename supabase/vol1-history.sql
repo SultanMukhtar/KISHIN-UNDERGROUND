@@ -2,6 +2,7 @@
 -- RIWAYAT UNDERGROUND Vol. 1 (turnamen arsip)
 -- Jalankan di Supabase > SQL Editor SETELAH schema.sql.
 -- Aman di-Run ulang: data Vol. 1 yang lama dihapus lalu ditulis ulang.
+-- Arsip Vol. 1 pakai id tetap: kalau namanya udah diganti di panel, nama itu tetap dipakai dan gak jadi dobel.
 --
 -- Yang dilakukan:
 --   1. Turnamen yang lagi jalan diganti namanya jadi "... Vol. 2"
@@ -22,8 +23,10 @@ alter table fight_history alter column completed_at drop not null;
 do $$
 declare
   vol1 constant text := 'UNDERGROUND Vol. 1';
+  vol1_id constant uuid := '00000000-0000-4000-8000-00000000a001';   -- id tetap arsip Vol. 1
   cur uuid;
   tid uuid;
+  nm text;
 begin
   if to_regclass('public.fight_history') is null or to_regclass('public.tournaments') is null then
     raise exception 'Jalankan supabase/schema.sql dulu, baru file ini.';
@@ -36,20 +39,22 @@ begin
   update fight_history h set tournament_name = t.name
     from tournaments t where t.id = cur and h.tournament_id = cur;
 
-  -- 2. Buang Vol. 1 lama (kalau file ini pernah di-Run)
-  delete from fight_history where tournament_name = vol1 and match_id is null;
-  delete from tournaments where name = vol1 and id is distinct from cur;
+  -- 2. Buang Vol. 1 lama (kalau file ini pernah di-Run). Nama yang udah diganti di panel dipakai lagi.
+  select name into nm from tournaments where id = vol1_id;
+  nm := coalesce(nm, vol1);
+  delete from fight_history where match_id is null and (tournament_id = vol1_id or tournament_name = vol1);
+  delete from tournaments where id is distinct from cur and (id = vol1_id or name = vol1);
 
   -- 3. Turnamen arsip Vol. 1 (dibikin "lebih tua" dari turnamen lain biar urutannya bener)
-  insert into tournaments (name, status, current_stage, champion_name, runner_up_name, third_name, created_at, completed_at)
-  values (vol1, 'archived', 'completed', 'Hito Kassa', 'Yb Arap', 'Njut Pourkian',
+  insert into tournaments (id, name, status, current_stage, champion_name, runner_up_name, third_name, created_at, completed_at)
+  values (vol1_id, nm, 'archived', 'completed', 'Hito Kassa', 'Yb Arap', 'Njut Pourkian',
           coalesce((select min(created_at) from tournaments), now()) - interval '1 minute', null)
   returning id into tid;
 
   -- 4. Semua fight Vol. 1. side = pemenangnya fighter ke-1 atau ke-2.
   insert into fight_history (tournament_id, tournament_name, match_no, stage,
                              fighter_a_name, fighter_b_name, winner_side, winner_name, result_method, completed_at)
-  select tid, vol1, v.no, v.stage, v.a, v.b, v.side,
+  select tid, nm, v.no, v.stage, v.a, v.b, v.side,
          case when v.side = 1 then v.a else v.b end, v.method, null
   from (values
     -- Ronde 1
@@ -101,4 +106,4 @@ end $$;
 -- Cek hasilnya
 select match_no, stage, fighter_a_name, fighter_b_name, winner_name, result_method,
        (fighter_a_id is not null) as a_nyambung, (fighter_b_id is not null) as b_nyambung
-from fight_history where tournament_name = 'UNDERGROUND Vol. 1' order by match_no;
+from fight_history where tournament_id = '00000000-0000-4000-8000-00000000a001' order by match_no;

@@ -1,61 +1,108 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { deletePhoto, photoPath, sb, uploadPhoto } from "@/lib/supabase";
 import type { TabProps } from "@/lib/adminTypes";
+import MoneyInput, { formatMoney, parseMoney } from "./MoneyInput";
+import PhotoField, { NO_PHOTO_CHANGE, type PhotoChange } from "./PhotoField";
 
-export default function SettingsTab({ data, reload, notify }: TabProps) {
+type Form = { eventName: string; tagline: string; fee: string; cut: string };
+
+export default function SettingsTab({ data, reload, notify, confirm }: TabProps) {
   const s = data.settings;
-  const [eventName, setEventName] = useState("");
-  const [tagline, setTagline] = useState("");
-  const [fee, setFee] = useState("");
-  const [cut, setCut] = useState("");
-  const [busy, setBusy] = useState(false);
 
+  /* ---------- info event ---------- */
+  // nilai yang tersimpan di database. Cuma berubah kalau isinya beneran berubah, bukan tiap data dimuat ulang.
+  const saved = useMemo<Form | null>(
+    () => (s ? { eventName: s.event_name, tagline: s.tagline, fee: formatMoney(s.registration_fee), cut: String(Math.round(s.default_house_cut * 100)) } : null),
+    [s?.event_name, s?.tagline, s?.registration_fee, s?.default_house_cut], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const [form, setForm] = useState<Form>(saved ?? { eventName: "", tagline: "", fee: "", cut: "" });
+  const [dirty, setDirty] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  // data baru masuk (misal admin lain nyimpan): isi form ikut, KECUALI lagi ada ketikan yang belum disimpan
   useEffect(() => {
-    if (!s) return;
-    setEventName(s.event_name);
-    setTagline(s.tagline);
-    setFee(String(s.registration_fee));
-    setCut(String(Math.round(s.default_house_cut * 100)));
-  }, [s]);
+    if (saved && !dirty) setForm(saved);
+  }, [saved, dirty]);
+
+  // ketikan belum disimpan → browser nanya dulu sebelum halaman ditutup / di-refresh
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
+
+  const set = (k: keyof Form) => (v: string) => {
+    setForm((f) => ({ ...f, [k]: v }));
+    setDirty(true);
+  };
+
+  const cutNum = Number(form.cut);
+  const cutBad = form.cut.trim() === "" || !Number.isFinite(cutNum) || cutNum < 0 || cutNum > 90;
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
+    if (busy) return;
+    if (cutBad) return setErr("Potongan kas harus angka 0 sampai 90.");
     setBusy(true);
+    setErr(null);
     const { error } = await sb().from("settings").update({
-      event_name: eventName.trim() || "UNDERGROUND",
-      tagline: tagline.trim(),
-      registration_fee: Math.max(parseInt(fee, 10) || 0, 0),
-      default_house_cut: Math.min(Math.max(parseFloat(cut) || 0, 0), 90) / 100,
+      event_name: form.eventName.trim() || "UNDERGROUND",
+      tagline: form.tagline.trim(),
+      registration_fee: parseMoney(form.fee) ?? 0,
+      default_house_cut: Math.round(cutNum) / 100,
       updated_at: new Date().toISOString(),
     }).eq("id", 1);
-    if (error) notify(error.message, true);
-    else { notify("Pengaturan disimpan."); await reload(); }
-    setBusy(false);
-  }
-
-  async function setHero(file: File | undefined | null) {
-    if (file === undefined) return;
-    if (!file && !confirm("Hapus foto hero? File-nya ikut dihapus permanen.")) return;
-    setBusy(true);
-    const oldUrl = s?.hero_url;
-    let hero_url: string | null = null;
-    try {
-      hero_url = file ? await uploadPhoto(file, "hero") : null;
-      const { error } = await sb().from("settings").update({ hero_url }).eq("id", 1);
-      if (error) throw error;
-      await deletePhoto(oldUrl); // file hero lama dibuang dari storage
-      notify(file ? "Foto hero diganti." : "Foto hero dihapus.");
+    if (error) {
+      setErr("Gagal nyimpan: " + error.message);
+    } else {
+      setDirty(false);
+      notify("Info event disimpan.");
       await reload();
-    } catch (err) {
-      await deletePhoto(hero_url);
-      notify((err as Error).message, true);
     }
     setBusy(false);
   }
 
+  /* ---------- foto hero ---------- */
+  const [hero, setHero] = useState<PhotoChange>(NO_PHOTO_CHANGE);
+  const [heroBusy, setHeroBusy] = useState(false);
+  const heroChanged = !!hero.file || hero.remove;
+
+  async function saveHero(e: React.FormEvent) {
+    e.preventDefault();
+    if (!heroChanged || heroBusy) return;
+    if (hero.remove && !(await confirm({
+      title: "Hapus foto hero?",
+      body: "Banner paling atas balik ke tampilan polos sampai ada foto baru.",
+      points: ["File fotonya ikut dihapus dari storage, gak bisa dibalikin."],
+      confirmLabel: "Hapus foto",
+      tone: "danger",
+    }))) return;
+    setHeroBusy(true);
+    const oldUrl = s?.hero_url;
+    let url: string | null = null;
+    try {
+      url = hero.file ? await uploadPhoto(hero.file, "hero") : null;
+      const { error } = await sb().from("settings").update({ hero_url: url }).eq("id", 1);
+      if (error) throw error;
+      await deletePhoto(oldUrl); // file hero lama dibuang dari storage
+      setHero(NO_PHOTO_CHANGE);
+      notify(url ? "Foto hero diganti." : "Foto hero dihapus.");
+      await reload();
+    } catch (er) {
+      await deletePhoto(url);
+      notify("Foto hero gagal disimpan: " + (er as Error).message, true);
+    }
+    setHeroBusy(false);
+  }
+
+  /* ---------- bersihin storage ---------- */
+  const [cleaning, setCleaning] = useState(false);
+
   async function cleanupPhotos() {
-    setBusy(true);
+    setCleaning(true);
     try {
       const used = new Set<string>();
       const [f, st, sp] = await Promise.all([
@@ -80,55 +127,78 @@ export default function SettingsTab({ data, reload, notify }: TabProps) {
           if (file.id && !used.has(path)) orphans.push(path);
         }
       }
-      if (!orphans.length) { notify("Gak ada file foto nganggur. Storage udah bersih."); return; }
-      if (!confirm(`Ada ${orphans.length} file foto yang gak dipakai siapa pun. Hapus permanen?`)) return;
+      if (!orphans.length) { notify("Gak ada foto nganggur. Storage udah bersih."); return; }
+      const ok = await confirm({
+        title: `Hapus ${orphans.length} foto nganggur?`,
+        body: "Foto-foto ini gak dipakai fighter, sponsor, atau hero mana pun.",
+        points: ["Dihapus permanen dari storage, gak bisa dibalikin."],
+        confirmLabel: `Hapus ${orphans.length} foto`,
+        tone: "danger",
+      });
+      if (!ok) return;
       const { error } = await sb().storage.from("photos").remove(orphans);
       if (error) throw error;
-      notify(`${orphans.length} file foto nganggur dihapus.`);
-    } catch (err) {
-      notify((err as Error).message, true);
+      notify(`${orphans.length} foto nganggur dihapus.`);
+    } catch (er) {
+      notify("Gagal bersihin storage: " + (er as Error).message, true);
     } finally {
-      setBusy(false);
+      setCleaning(false);
     }
   }
 
   return (
     <>
-      <div className="card">
-        <h3>Foto hero (banner paling atas)</h3>
-        {s?.hero_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={s.hero_url} alt="" style={{ width: "100%", maxHeight: 220, objectFit: "cover", border: "1px solid var(--line)", marginBottom: 10 }} />
-        ) : (
-          <p style={{ fontSize: 13, color: "var(--muted)", marginTop: 0 }}>Belum ada. Pakai gambar landscape lebar (misal 1600×800), maks 5 MB.</p>
-        )}
-        <div className="row-actions">
-          <label className="btn" style={{ cursor: "pointer" }}>
-            {s?.hero_url ? "Ganti foto" : "Upload foto"}
-            <input type="file" accept="image/*" hidden disabled={busy} onChange={(e) => { setHero(e.target.files?.[0]); e.target.value = ""; }} />
-          </label>
-          {s?.hero_url && <button className="btn danger" disabled={busy} onClick={() => setHero(null)}>Hapus foto</button>}
-        </div>
-      </div>
-
-      <form className="card" onSubmit={save}>
+      <form className="card" onSubmit={save} noValidate>
         <h3>Info event</h3>
         <div className="form-grid">
-          <label className="f">Nama event<input type="text" value={eventName} onChange={(e) => setEventName(e.target.value)} /></label>
-          <label className="f">Biaya pendaftaran (¥)<input type="number" min={0} value={fee} onChange={(e) => setFee(e.target.value)} /></label>
-          <label className="f">House cut default (%)<input type="number" min={0} max={90} value={cut} onChange={(e) => setCut(e.target.value)} /></label>
+          <label className="f">Nama event<input type="text" value={form.eventName} onChange={(e) => set("eventName")(e.target.value)} maxLength={60} /></label>
+          <label className="f">Biaya pendaftaran
+            <MoneyInput value={form.fee} onChange={set("fee")} placeholder="0" />
+          </label>
+          <label className="f">Potongan kas taruhan (%)
+            <input type="number" inputMode="numeric" min={0} max={90} step={1} value={form.cut} onChange={(e) => set("cut")(e.target.value)} aria-invalid={cutBad || undefined} aria-describedby="set-cut-hint" />
+          </label>
         </div>
-        <label className="f" style={{ marginTop: 10 }}>Tagline<textarea rows={2} value={tagline} onChange={(e) => setTagline(e.target.value)} /></label>
-        <p style={{ fontSize: 12, color: "var(--muted)" }}>House cut default dipakai saat bracket dibuat. Tiap match tetap bisa diubah sendiri di tab Taruhan.</p>
-        <button className="btn" disabled={busy}>Simpan</button>
+        <p className="hint" id="set-cut-hint">Potongan kas kepakai buat bracket baru. Tiap fight tetap bisa diubah sendiri di tab Taruhan.</p>
+        <label className="f settings-tagline">Tagline<textarea rows={2} value={form.tagline} onChange={(e) => set("tagline")(e.target.value)} maxLength={160} /></label>
+        {err && <div className="notice err admin-modal-err" role="alert">{err}</div>}
+        <div className="row-actions settings-actions">
+          <button className="btn" disabled={busy || !dirty}>{busy ? "Menyimpan…" : "Simpan info event"}</button>
+          {dirty && !busy && (
+            <button type="button" className="btn ghost" onClick={() => { setDirty(false); setErr(null); if (saved) setForm(saved); }}>Batalin perubahan</button>
+          )}
+          {dirty && <span className="unsaved" role="status">Belum disimpan</span>}
+        </div>
+      </form>
+
+      <form className="card" onSubmit={saveHero}>
+        <h3>Foto hero</h3>
+        <PhotoField
+          label="Banner paling atas di halaman penonton"
+          name={s?.event_name ?? "Hero"}
+          currentUrl={s?.hero_url}
+          value={hero}
+          onChange={setHero}
+          shape="wide"
+          disabled={heroBusy}
+          hint="Pakai foto landscape lebar, misal 1600×800. JPG, PNG, WebP, atau GIF, maksimal 5 MB."
+        />
+        {heroChanged && (
+          <div className="row-actions settings-actions">
+            <button className={hero.remove ? "btn danger" : "btn"} disabled={heroBusy}>
+              {heroBusy ? "Menyimpan…" : hero.remove ? "Hapus foto hero" : "Simpan foto hero"}
+            </button>
+            <button type="button" className="btn ghost" disabled={heroBusy} onClick={() => setHero(NO_PHOTO_CHANGE)}>Batal</button>
+          </div>
+        )}
       </form>
 
       <div className="card">
         <h3>Bersihkan storage foto</h3>
-        <p style={{ fontSize: 13, color: "var(--muted)", marginTop: 0 }}>
-          Foto yang diganti/dihapus udah otomatis ikut kehapus. Tombol ini buat jaga-jaga: nyari file foto yang gak dipakai fighter, sponsor, atau hero, lalu menghapusnya.
-        </p>
-        <button className="btn ghost" onClick={cleanupPhotos} disabled={busy}>Cari & hapus foto nganggur</button>
+        <p className="hint">Foto yang diganti atau dihapus udah otomatis ikut kebuang. Tombol ini buat jaga-jaga kalau ada sisa.</p>
+        <div className="row-actions settings-actions">
+          <button type="button" className="btn ghost" onClick={cleanupPhotos} disabled={cleaning}>{cleaning ? "Nyari…" : "Cari foto nganggur"}</button>
+        </div>
       </div>
     </>
   );

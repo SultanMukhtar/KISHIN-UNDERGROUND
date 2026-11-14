@@ -765,11 +765,17 @@ button.slip:hover, button.slip:focus-visible { background: rgba(214, 210, 200, 0
 .past-rest { font-size: 14px; color: var(--ash); white-space: pre-wrap; }
 
 /* =====================================================================
-   SPONSOR: flyer kecil ditempel di tembok
+   SPONSOR: flyer ditempel di tembok, yang nyumbang paling gede paling besar.
+   Lebar flyer pakai "unit" kolom: w1 = 1 kolom, w2 = 2 kolom. Baris terakhir rata tengah,
+   jadi 1-2 sponsor tetap kelihatan sengaja ditempel, bukan tembok kosong.
    ===================================================================== */
 
-.spons { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); gap: clamp(26px, 3.4vw, 44px) clamp(16px, 2.4vw, 32px); margin: 0; padding: 8px 0 0; list-style: none; }
-.spons > li { min-width: 0; }
+.spon-board { --cols: 2; --gx: clamp(14px, 2.4vw, 30px); --gy: clamp(26px, 3.4vw, 42px); }
+.spon-wall { --u: calc((100% - (var(--cols) - 1) * var(--gx)) / var(--cols)); display: flex; flex-wrap: wrap; justify-content: center; align-items: stretch; gap: var(--gy) var(--gx); margin: 0; padding: 8px 0 0; list-style: none; }
+.spon-wall > li { min-width: 0; }
+.spon-wall > .w1 { flex: 0 0 var(--u); }
+.spon-wall > .w2 { flex: 0 0 calc(var(--u) * 2 + var(--gx)); }
+
 .spon {
   position: relative;
   display: flex;
@@ -781,15 +787,118 @@ button.slip:hover, button.slip:focus-visible { background: rgba(214, 210, 200, 0
   transform: rotate(var(--tilt, 0deg));
 }
 .spon-tape { top: 4px; left: 50%; width: 84px; height: 24px; margin-left: -42px; transform: rotate(-3deg); }
-.spon-photo { position: relative; display: block; aspect-ratio: 1; }
-.spon-photo .mug { position: absolute; inset: 0; width: auto; height: auto; }
-.spon-photo .mug img { object-fit: contain; }   /* logo gak boleh kepotong */
+.spon-body { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+
+/* logo dicetak di kertas: utuh, abu-abu, kontras secukupnya (logo gelap gak jadi kotak hitam) */
+.spon-logo { position: relative; display: grid; place-items: center; aspect-ratio: 4 / 3; padding: 9%; overflow: hidden; background: rgba(10, 10, 10, 0.035); box-shadow: inset 0 0 0 1px rgba(10, 10, 10, 0.2); container-type: inline-size; }
+.spon-logo img { display: block; width: 100%; height: 100%; object-fit: contain; filter: grayscale(1) brightness(1.08) contrast(1.25); mix-blend-mode: multiply; }   /* latar abu terang jadi putih, beda gelap tipis di logo gelap tetap kelihatan */
+.spon-logo::after { content: ""; position: absolute; inset: 0; background: url(/tex/paper.svg) 0 0 / 420px; mix-blend-mode: multiply; opacity: 0.45; pointer-events: none; }
+/* belum ada logo: cap inisial tinta merah */
+.spon-logo.is-seal { background: none; box-shadow: none; }
+.spon-logo.is-seal::after { display: none; }
+.spon-seal {
+  display: grid;
+  place-items: center;
+  height: 96%;
+  aspect-ratio: 1;
+  border: 6px double var(--blood);
+  border-radius: 50%;
+  color: var(--blood);
+  transform: rotate(-9deg);
+  -webkit-mask: url(/tex/distress-light.svg) 0 0 / 170px;
+  mask: url(/tex/distress-light.svg) 0 0 / 170px;
+}
+.spon-seal b { font: 800 40px/1 var(--f-stencil); font-size: clamp(20px, 16cqw, 92px); letter-spacing: 0.04em; }
+
 .spon-name { margin: 12px 0 8px; font-family: var(--f-sans); font-stretch: 62%; font-weight: 900; font-size: clamp(22px, 2.2vw, 30px); line-height: 0.95; text-transform: uppercase; overflow-wrap: anywhere; }
 .spon-amount { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 10px; margin: auto 0 0; padding-top: 8px; border-top: 2px solid var(--bg); }   /* nempel di bawah: sejajar antar kartu */
 .spon-amount span { font: 800 13px/1 var(--f-stencil); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); }
 .spon-amount b { font: 800 clamp(20px, 2vw, 26px)/1 var(--f-stencil); letter-spacing: 0.02em; color: var(--blood); }
-@media (min-width: 700px) {
-  .spons { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
+.spon-amount.is-kind span { color: var(--bg); }
+
+/* porsi dari total uang sponsor */
+.spon-share { display: grid; gap: 6px; margin-top: 9px; }
+.spon-bar { display: block; height: 6px; background: rgba(10, 10, 10, 0.12); }
+.spon-bar i { display: block; width: calc(var(--w, 0) * 100%); height: 100%; background: var(--bg); transform: scaleX(0); transform-origin: left; transition: transform 0.9s var(--ease-mech) calc(var(--d, 0ms) + 260ms); }
+.site.is-booted .rv[data-in] .spon-bar i { transform: none; }
+.spon-pct { font: 700 12px/1 var(--f-stencil); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); }
+
+/* sponsor utama: flyer dua kolom, logo kiri */
+.spon.is-wide { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 0 22px; align-items: stretch; padding: 30px 22px 20px; }
+.spon.is-wide .spon-logo { align-self: start; aspect-ratio: 1; }
+.spon.is-lead .spon-name { margin: 14px 0 12px; font-size: clamp(30px, 3.3vw, 48px); line-height: 0.9; }
+.spon.is-lead .spon-amount b { font-size: clamp(26px, 2.7vw, 38px); }
+.spon-stamp { align-self: flex-start; margin-top: 2px; padding: 6px 10px 5px; border-width: 5px; font-size: 13px; }
+
+/* struk hitungan hadiah: uang sponsor kelihatan nyambung ke hadiah juara */
+.receipt {
+  position: relative;
+  height: 100%;
+  padding: 18px 16px 28px;
+  color: var(--bg);
+  background: url(/tex/paper.svg) 0 0 / 420px, #EFEBE1;
+  transform: rotate(-0.8deg);
+  container-type: inline-size;
+}
+.receipt-head { margin: 0 0 12px; padding-bottom: 10px; border-bottom: 2px dashed rgba(10, 10, 10, 0.45); font: 800 15px/1 var(--f-stencil); letter-spacing: 0.14em; text-align: center; text-transform: uppercase; }
+.receipt dl { display: grid; gap: 10px; margin: 0; }
+.receipt dl > div { display: grid; gap: 3px; }
+.receipt dt { font-size: 13px; font-weight: 600; line-height: 1.2; color: var(--ink-soft); }
+.receipt dd { margin: 0; font: 800 20px/1 var(--f-stencil); letter-spacing: 0.03em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.receipt .is-cut dd { color: var(--ink-soft); }
+.receipt .is-total { margin-top: 2px; padding-top: 12px; border-top: 2px dashed rgba(10, 10, 10, 0.45); }
+.receipt .is-total dt { font: 800 14px/1 var(--f-stencil); letter-spacing: 0.12em; text-transform: uppercase; color: var(--bg); }
+.receipt .is-total dd { font-size: 30px; color: var(--blood); }
+.receipt-link { display: inline-block; margin-top: 16px; font-weight: 700; font-size: 14px; color: var(--bg); text-decoration: underline 2px var(--blood); text-underline-offset: 3px; }
+.receipt-link::after { content: " \2192"; }
+.receipt-link:hover { color: var(--blood); }
+@container (min-width: 300px) {
+  .receipt dl > div { grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 12px; }
+}
+
+/* sponsor kecil (setelah 5 terbesar): tiket ringkas */
+.spon-stubs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 14px var(--gx); margin: var(--gy) 0 0; padding: 0; list-style: none; }
+.spon-stub {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px 10px 10px;
+  color: var(--bg);
+  background: url(/tex/paper.svg) 0 0 / 420px, var(--paper);
+  border-left: 6px solid var(--bg);
+}
+.spon-stub .spon-logo { width: 46px; aspect-ratio: 1; padding: 4px; }
+.spon-stub-mark { display: grid; place-items: center; width: 46px; aspect-ratio: 1; border: 3px double var(--blood); border-radius: 50%; color: var(--blood); font: 800 14px/1 var(--f-stencil); letter-spacing: 0.02em; transform: rotate(-8deg); }
+.spon-stub-name { margin: 0; min-width: 0; font-family: var(--f-sans); font-stretch: 66%; font-weight: 900; font-size: 19px; line-height: 1; text-transform: uppercase; overflow-wrap: anywhere; }
+.spon-stub-amount { display: grid; justify-items: end; gap: 4px; }
+.spon-stub-amount b { font: 800 19px/1 var(--f-stencil); letter-spacing: 0.02em; color: var(--blood); white-space: nowrap; }
+.spon-stub-amount small { font: 700 11px/1 var(--f-stencil); letter-spacing: 0.1em; color: var(--ink-soft); }
+
+/* sponsor barang / jasa: label kecil */
+.spon-also { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; margin-top: clamp(30px, 4vw, 46px); padding-top: 18px; border-top: 1px dashed var(--line-2); }
+.spon-also-k { margin: 0; font: 800 15px/1 var(--f-stencil); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ash); }
+.spon-also ul { display: flex; flex-wrap: wrap; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.spon-tag { display: inline-flex; align-items: center; gap: 9px; padding: 7px 12px 6px; color: var(--bg); background: url(/tex/paper.svg) 0 0 / 420px, var(--paper); font-stretch: 68%; font-weight: 900; font-size: 19px; line-height: 1; text-transform: uppercase; transform: rotate(var(--tilt, 0deg)); }
+.spon-tag .spon-logo { width: 30px; aspect-ratio: 1; padding: 2px; background: none; box-shadow: none; }
+.spon-tag .spon-logo::after { display: none; }
+
+@media (min-width: 640px) {
+  .spon-board { --cols: 3; }
+}
+@media (min-width: 1000px) {
+  .spon-board { --cols: 4; }
+}
+@media (max-width: 639px) {
+  .spon-wall > .is-receipt { order: 9; flex-basis: 100%; }
+  .spon-wall > .is-odd { flex-basis: 100%; }
+  .spon.is-wide, .is-odd .spon { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: 0 14px; padding: 26px 14px 16px; }
+  .is-odd .spon .spon-logo { align-self: start; aspect-ratio: 1; }
+  .is-odd .spon .spon-name { margin-top: 0; }
+  .spon.is-lead .spon-name { font-size: clamp(26px, 8vw, 34px); }
+  .spon-stamp { font-size: 11px; padding: 5px 8px 4px; border-width: 4px; }
+  .spon-name { font-size: 21px; }
+  .spon-amount b { font-size: 19px; }
 }
 
 /* =====================================================================
@@ -1027,7 +1136,26 @@ button.ms-corner:hover .mug img { transform: scale(1.05); }
 .am-row label.f { font-size: 13px; }
 .admin .am-row input, .admin .am-row select { padding: 8px 10px; font-size: 15px; }
 .am-note { margin: 0; font-size: 13px; line-height: 1.35; color: var(--ash); }
-.admin .card.is-editing { border-color: var(--bone); border-top: 6px solid var(--blood); }
+/* popup edit di panel panitia: versi gelap dari modal kertas, senada sama kartu admin */
+.admin-modal { --mw: 560px; color: var(--bone); }
+.admin-modal .modal-box {
+  clip-path: none !important;
+  padding: 20px 22px 22px;
+  background: var(--soot);
+  border: 1px solid var(--bone);
+  border-top: 6px solid var(--blood);
+  scrollbar-color: var(--line-2) transparent;
+}
+.admin-modal .modal-x { width: 40px; height: 40px; margin: -4px -6px 6px 14px; border-color: var(--line-2); background: var(--soot); }
+.admin-modal .modal-x span, .admin-modal .modal-x span::after { background: var(--bone); }
+.admin-modal .modal-x:hover { background: var(--bone); }
+.admin-modal .modal-x:hover span, .admin-modal .modal-x:hover span::after { background: var(--bg); }
+.admin-modal :focus-visible { outline-color: var(--bone); }
+.admin-modal h3 { margin: 4px 0 16px; font-stretch: 72%; font-weight: 900; font-size: 26px; line-height: 1; text-transform: uppercase; overflow-wrap: anywhere; }
+.admin-modal .form-grid { align-items: start; }
+.admin-modal .hint { margin: 10px 0 0; font-size: 13px; line-height: 1.4; color: var(--ash); }
+.admin-modal-actions { margin-top: 18px; }
+.admin-modal-err { margin: 14px 0 0; }
 .admin-details { margin-top: 16px; }
 .admin-details summary { display: inline-flex; align-items: center; gap: 10px; padding: 9px 12px; border: 2px solid var(--line-2); font-stretch: 80%; font-weight: 700; font-size: 15px; cursor: pointer; list-style: none; }
 .admin-details summary::-webkit-details-marker { display: none; }
@@ -1035,20 +1163,6 @@ button.ms-corner:hover .mug img { transform: scale(1.05); }
 .admin-details[open] summary::before { content: "–"; }
 .admin-details summary:hover { border-color: var(--bone); }
 .admin-details > .table-wrap, .admin-details > .empty-state { margin-top: 12px; }
-
-/* keterangan kolom Status / Payout / Dibayar di tab Taruhan */
-.admin .paykey-card { margin-top: 16px; }
-.paykey { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 14px 24px; margin: 0; font-size: 15px; line-height: 1.45; }
-.paykey dt { padding-top: 3px; font: 800 14px/1.2 var(--f-stencil); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ash); }
-.paykey dd { margin: 0; max-width: 72ch; }
-.paykey-status { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
-.paykey-status li { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 12px; align-items: baseline; }
-.paykey .pill { justify-self: start; cursor: default; }
-@media (max-width: 640px) {
-  .paykey { grid-template-columns: minmax(0, 1fr); gap: 4px; }
-  .paykey dd + dt { margin-top: 14px; }
-  .paykey-status li { grid-template-columns: minmax(0, 1fr); gap: 4px; }
-}
 .admin .notice code { padding: 1px 5px; background: var(--bg); border: 1px solid var(--line-2); font-size: 0.92em; }
 .admin .chip { vertical-align: middle; }
 
@@ -1137,6 +1251,7 @@ html.calm { scroll-behavior: auto; }
 .calm .site .rv-none { transition: none; }
 .calm .stamp-slam, .calm .event-stamp { animation-name: stamp-fade; animation-duration: 0.3s; animation-timing-function: ease-out; }
 .calm .pod-winner::after { display: none; }
+.calm .spon-bar i { transform: none; transition: none; }
 
 /* layar pembuka: gak ada pintu geser, cuma memudar */
 .calm .boot { transition: opacity 0.4s ease; }

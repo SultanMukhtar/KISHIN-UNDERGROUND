@@ -1,6 +1,6 @@
 /**
  * Hadiah juara turnamen yang lagi jalan:
- * - Sumbernya uang pendaftaran (fighter yang udah bayar di vol ini) + uang sponsor vol ini.
+ * - Sumbernya uang pendaftaran (fighter yang udah bayar) + uang sponsor turnamen yang lagi jalan.
  * - Dipotong dulu 30% buat kas panitia, sisanya jadi total hadiah.
  * - Total hadiah dibagi: juara 1 = 50%, juara 2 = 30%, juara 3 = 20%.
  * - Pecahan Yen dibulatkan ke bawah, sisa pembulatannya ikut ke kas panitia.

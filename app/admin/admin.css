@@ -1,0 +1,379 @@
+/* =====================================================================
+   PANEL PANITIA: fondasi bersama (pemberitahuan, konfirmasi, isian uang, pilih foto, tabel di HP)
+   ===================================================================== */
+
+/* ---------- pemberitahuan: nempel di pojok bawah, selalu kelihatan ---------- */
+.toasts { position: fixed; right: 20px; bottom: 20px; z-index: 150; width: min(420px, calc(100% - 32px)); pointer-events: none; }
+.toasts-list { display: grid; gap: 8px; }
+.toast {
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 4px 12px;
+  padding: 12px 8px 12px 14px;
+  background: var(--bg);
+  border: 1px solid var(--line-2);
+  border-left: 6px solid var(--bone);
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.6);
+  animation: toast-in 0.32s var(--ease-mech) both;
+}
+.toast.is-err { border-left-color: var(--blood-hot); }
+.toast-tag { padding-top: 2px; font: 800 13px/1.2 var(--f-stencil); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ash); }
+.toast.is-err .toast-tag { color: var(--bone); background: var(--blood); padding: 3px 6px 2px; }
+.toast-text { margin: 0; font-size: 15px; line-height: 1.4; overflow-wrap: anywhere; }
+.toast-x { position: relative; width: 32px; height: 32px; margin: -6px 0; padding: 0; border: 0; background: none; cursor: pointer; }
+.toast-x span, .toast-x span::after { position: absolute; left: 50%; top: 50%; width: 16px; height: 2px; margin: -1px 0 0 -8px; background: var(--ash); transform: rotate(45deg); }
+.toast-x span::after { content: ""; transform: rotate(90deg); }
+.toast-x:hover span, .toast-x:hover span::after { background: var(--bone); }
+@keyframes toast-in { from { opacity: 0; transform: translate3d(0, 14px, 0); } }
+.calm .toast { animation-name: fade-in; }
+
+/* ---------- dialog konfirmasi ---------- */
+.admin-modal.confirm { --mw: 480px; }
+.admin-modal.confirm.is-danger .modal-box { border-top-color: var(--blood-hot); }
+.confirm-body { margin: 0 0 10px; font-size: 16px; line-height: 1.45; }
+.confirm-points { margin: 0 0 4px; padding: 0; list-style: none; border-top: 1px solid var(--line-2); }
+.confirm-points li { position: relative; padding: 9px 0 8px 22px; border-bottom: 1px solid var(--line-2); font-size: 15px; line-height: 1.4; }
+.confirm-points li::before { content: ""; position: absolute; left: 2px; top: 16px; width: 10px; height: 3px; background: var(--blood-hot); }
+.confirm-type { margin-top: 16px; }
+.confirm-type input { font: 800 20px/1 var(--f-stencil); letter-spacing: 0.12em; text-transform: uppercase; }
+.btn.danger.is-solid { background: var(--blood); border-color: var(--blood); color: var(--bone); }
+.btn.danger.is-solid:hover { background: var(--blood-hot); border-color: var(--blood-hot); }
+
+/* ---------- isian uang ---------- */
+.money { position: relative; display: block; }
+.money-sign { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font: 800 18px/1 var(--f-stencil); color: var(--ash); pointer-events: none; }
+.admin .money input, .admin-modal .money input { padding-left: 30px; font-variant-numeric: tabular-nums; font-weight: 700; }
+
+/* ---------- pilih foto dengan pratinjau ---------- */
+.photo-field { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 14px; align-items: start; }
+.photo-field-preview { position: relative; display: block; width: 96px; aspect-ratio: 1; border: 1px solid var(--line-2); background: var(--bg); }
+.photo-field.is-portrait .photo-field-preview { aspect-ratio: 4 / 5; }
+.photo-field-preview .mug { position: absolute; inset: 0; width: auto; height: auto; }
+.photo-field.is-logo .photo-field-preview .mug img { object-fit: contain; }
+.photo-field-label { display: block; margin-bottom: 8px; font-stretch: 85%; font-weight: 700; font-size: 14px; line-height: 1.2; color: var(--ash); }
+.photo-field .hint { margin: 8px 0 0; }
+.btn.is-disabled { opacity: 0.45; pointer-events: none; }
+label.btn { cursor: pointer; }
+label.btn:focus-within { outline: 3px solid var(--bone); outline-offset: 3px; }
+
+/* ---------- tombol kecil lebih gampang dipencet di layar sentuh ---------- */
+@media (pointer: coarse) {
+  .admin .btn.sm, .admin-modal .btn.sm { min-height: 40px; padding: 10px 12px 9px; }
+  .admin .pill { min-height: 36px; padding: 9px 11px 8px; }
+  .admin .check { min-height: 40px; }
+}
+
+/* =====================================================================
+   SHELL PANEL: status muat, daftar "perlu diurus", menu bawah di HP
+   ===================================================================== */
+
+/* ---------- lagi ngambil data / data lama ---------- */
+.admin-loading { display: flex; align-items: center; gap: 12px; margin: 8px 0; color: var(--ash); font-size: 16px; }
+.admin-loading::after { content: ""; width: 34px; height: 3px; background: var(--blood-hot); animation: liveblink 1s steps(2, jump-none) infinite; }
+.calm .admin-loading::after { animation: none; opacity: 0.6; }
+.admin-stale { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.admin-stale span { flex: 1 1 28ch; }
+.admin-first-error { max-width: 560px; }
+
+/* ---------- yang perlu diurus sekarang ---------- */
+.now { display: grid; gap: 6px; margin: 0 0 22px; padding: 0; list-style: none; }
+.now-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 9px 10px 9px 14px;
+  background: var(--soot);
+  border: 1px solid var(--line-2);
+  border-left: 4px solid var(--line-2);
+}
+.now-item.is-live { border-left-color: var(--blood-hot); }
+.now-item.is-warn { border-left-color: var(--bone); }
+.now-text { flex: 1 1 24ch; min-width: 0; font-stretch: 85%; font-weight: 700; font-size: 16px; line-height: 1.3; }
+.now-item.is-todo .now-text { font-weight: 600; color: var(--ash); }
+.now-item .btn { flex: none; }
+
+/* ---------- menu samping ---------- */
+.admin-tabs-sep { margin: 14px 0 4px; padding: 12px 12px 0; border-top: 1px solid var(--line); font: 700 12px/1 var(--f-stencil); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ash); }
+.admin-tab small.is-alert, .admin-bar-tab small.is-alert { padding: 3px 5px 2px; background: var(--blood); color: var(--bone); }
+
+/* ---------- menu bawah: cuma di HP ---------- */
+.admin-bar { display: none; }
+.admin-more-who { margin: -8px 0 14px; color: var(--ash); font-size: 15px; }
+.admin-more-tabs { display: grid; border-top: 1px solid var(--line-2); }
+.admin-more-tabs .admin-tab { padding: 14px 12px; border-bottom: 1px solid var(--line-2); font-size: 20px; }
+
+@media (max-width: 760px) {
+  .admin-side { position: relative; padding-block: 10px; }
+  .admin-tabs, .admin-side-foot { display: none; }
+  .admin-main { padding-top: 18px; padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+  .admin-head h1 { margin-bottom: 8px; }
+  .admin-head p { font-size: 15px; }
+
+  .admin-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    display: grid;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--bg);
+    border-top: 1px solid var(--line-2);
+    box-shadow: 0 -8px 18px rgba(0, 0, 0, 0.55);
+  }
+  .admin-bar-tab {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-height: 60px;
+    padding: 8px 2px 7px;
+    border: 0;
+    border-top: 3px solid transparent;
+    background: none;
+    color: var(--ash);
+    font: 800 15px/1 var(--f-stencil);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .admin-bar-tab small { position: absolute; top: 6px; left: calc(50% + 14px); font: 800 11px/1 var(--f-stencil); letter-spacing: 0.04em; color: var(--ash); }
+  .admin-bar-tab.is-on { color: var(--bone); border-top-color: var(--blood-hot); background: var(--soot); }
+  .admin-bar-tab:focus-visible { outline: 3px solid var(--bone); outline-offset: -3px; }
+
+  .toasts { left: 12px; right: 12px; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); width: auto; }
+}
+
+/* ---------- popup edit: buang perubahan? + aksi tambahan ---------- */
+.discard { margin-top: 18px; padding: 12px 14px; border: 1px solid var(--line-2); border-left: 4px solid var(--blood-hot); background: var(--bg); }
+.discard p { margin: 0 0 10px; font-weight: 700; font-size: 16px; }
+.admin-modal-extra { margin-left: auto; }
+@media (max-width: 480px) { .admin-modal-extra { margin-left: 0; flex: 1 1 100%; } }
+
+/* ---------- foto lebar (hero) ---------- */
+.photo-field.is-wide { grid-template-columns: minmax(0, 1fr); }
+.photo-field.is-wide .photo-field-preview { width: 100%; max-width: 560px; aspect-ratio: 2 / 1; }
+
+/* ---------- teks bantu & aksi di kartu ---------- */
+.admin .card .hint { margin: 10px 0 0; max-width: 70ch; font-size: 14px; line-height: 1.45; color: var(--ash); }
+.admin .card h3 + .hint { margin-top: -6px; }
+.settings-tagline { margin-top: 14px; }
+.settings-actions { margin-top: 16px; }
+.unsaved { display: inline-flex; align-items: center; gap: 8px; font: 800 13px/1 var(--f-stencil); letter-spacing: 0.1em; text-transform: uppercase; color: var(--bone); }
+.unsaved::before { content: ""; width: 8px; height: 8px; background: var(--blood-hot); }
+.admin input[aria-invalid="true"], .admin-modal input[aria-invalid="true"] { border-color: var(--blood-hot); }
+
+/* =====================================================================
+   BRACKET
+   ===================================================================== */
+.bracket-round { margin-top: 26px; }
+.bracket-round:first-child { margin-top: 0; }
+.bracket-tools { margin: 0 0 8px; padding: 10px 12px; border: 1px dashed var(--line-2); }
+.bracket-tools .hint-inline { flex: 1 1 24ch; }
+.hint-inline { font-size: 14px; line-height: 1.4; color: var(--ash); }
+.admin .pick-row .fighter-id { flex: 1; min-width: 0; }
+.admin .pick-row .nm { font-weight: 600; }
+.admin .pick-row .nm.is-empty { color: var(--ash); font-weight: 500; }
+.admin .pick-row.is-won .nm { font-weight: 800; }
+.admin .pick-row.is-lost .nm { color: var(--ash); }
+.won-tag { padding: 4px 7px 3px; background: var(--blood); color: var(--bone); font: 800 13px/1 var(--f-stencil); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+.admin .admin-match:focus { outline: none; }
+.admin .admin-match.is-flash { animation: match-flash 2.4s ease-out both; }
+@keyframes match-flash { 0%, 30% { box-shadow: 0 0 0 3px var(--bone); } 100% { box-shadow: 0 0 0 3px transparent; } }
+.calm .admin .admin-match.is-flash { animation: none; box-shadow: 0 0 0 3px var(--bone); }
+.admin-details .extra-form { margin: 12px 0 0; }
+.danger-zone { margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--line); }
+.danger-zone summary { color: var(--ash); }
+.danger-zone[open] summary { color: var(--bone); border-color: var(--blood-hot); }
+.danger-zone .hint { margin: 12px 0; max-width: 62ch; font-size: 14px; color: var(--ash); }
+
+/* ---------- pilihan berbentuk kartu (pemenang, cara menang) ---------- */
+.choice { margin: 0 0 16px; padding: 0; border: 0; min-width: 0; }
+.choice legend { margin-bottom: 8px; padding: 0; font-stretch: 85%; font-weight: 700; font-size: 14px; color: var(--ash); }
+.choice-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.choice-grid.is-methods { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.choice-opt { position: relative; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 10px 12px; border: 2px solid var(--line-2); background: var(--bg); cursor: pointer; }
+.choice-opt input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.choice-opt:hover { border-color: var(--ash); }
+.choice-opt:focus-within { outline: 3px solid var(--bone); outline-offset: 2px; }
+.choice-opt.is-on { border-color: var(--bone); background: var(--soot); box-shadow: inset 4px 0 0 var(--blood-hot); }
+.choice-opt.is-fighter span { min-width: 0; font-stretch: 80%; font-weight: 800; font-size: 18px; line-height: 1.1; overflow-wrap: anywhere; }
+.choice-opt b { display: block; font: 800 18px/1 var(--f-stencil); letter-spacing: 0.06em; text-transform: uppercase; }
+.choice-opt small { display: block; margin-top: 4px; font-size: 13px; line-height: 1.25; color: var(--ash); }
+.choice-opt.is-on small { color: var(--bone); }
+.choice .hint { margin-top: 8px; }
+.result-effects { margin-top: 4px; }
+.result-effects p { margin: 0 0 6px; font-stretch: 85%; font-weight: 700; font-size: 14px; color: var(--ash); }
+@media (max-width: 420px) { .choice-grid:not(.is-methods) { grid-template-columns: minmax(0, 1fr); } }
+
+/* =====================================================================
+   TABEL & ANGKA
+   ===================================================================== */
+.admin th.num, .admin td.num { text-align: right; }
+.admin td.cell-action { text-align: right; white-space: nowrap; }
+.nowrap { white-space: nowrap; }
+.muted { color: var(--ash); }
+.sub-line { display: block; margin-top: 3px; font-size: 13px; font-weight: 500; line-height: 1.3; color: var(--ash); overflow-wrap: anywhere; }
+.pill.is-static { cursor: default; }
+.paid-cell { display: inline-flex; align-items: center; gap: 12px; }
+.paid-tag { padding: 4px 7px 3px; border: 2px solid var(--bone); font: 800 13px/1 var(--f-stencil); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+
+.list-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin: 24px 0 10px; }
+.list-head h3 { margin: 0; font-stretch: 72%; font-weight: 900; font-size: 22px; line-height: 1; text-transform: uppercase; }
+.list-head .count { margin-left: 6px; font: 800 17px/1 var(--f-stencil); letter-spacing: 0.04em; color: var(--ash); }
+.list-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.admin input[type="search"].list-search { width: min(100%, 300px); padding: 9px 12px; font-size: 15px; }
+
+/* angka ringkas di atas tab */
+.stats.is-compact { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+.stats.is-compact .stat { padding: 12px 14px; }
+.stats.is-compact .v { font-size: 26px; }
+.stat .s { margin-top: 5px; font-size: 13px; line-height: 1.3; color: var(--ash); }
+.stat.is-alert { border-color: var(--bone); box-shadow: inset 4px 0 0 var(--blood-hot); }
+.stat.is-win { border-color: var(--bone); box-shadow: inset 4px 0 0 var(--blood-hot); }
+
+/* pindah tampilan di dalam tab */
+.view-switch { margin: 0 0 16px; }
+.view-switch .tab { min-height: 42px; font-stretch: 85%; font-size: 16px; }
+
+/* =====================================================================
+   TARUHAN
+   ===================================================================== */
+.bet-head .bet-state { margin-top: 12px; }
+.bet-head .bet-state .hint-inline { flex: 1 1 22ch; }
+.bet-form .choice { margin-bottom: 14px; }
+.bet-form .choice-opt span small { margin-top: 5px; font-stretch: 100%; font-weight: 500; }
+.last-slip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 18px;
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  background: var(--bg);
+  border: 2px dashed var(--bone);
+}
+.last-slip > div:first-child { display: grid; gap: 4px; min-width: 0; }
+.last-slip-k { font: 700 12px/1.2 var(--f-stencil); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ash); }
+.last-slip b { font: 800 30px/1 var(--f-stencil); letter-spacing: 0.08em; }
+.last-slip-d { font-size: 14px; color: var(--ash); overflow-wrap: anywhere; }
+.pools-admin { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin: 0 0 6px; }
+.pools-admin .stat .k { overflow-wrap: anywhere; }
+.cut-box { margin: 0; }
+.cut-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.admin .cut-row input { width: 84px; padding: 8px 10px; font-weight: 700; }
+.cut-row span { font: 800 20px/1 var(--f-stencil); color: var(--ash); }
+
+/* =====================================================================
+   TABEL JADI KARTU DI HP (table.rtable + td[data-label])
+   ===================================================================== */
+@media (max-width: 760px) {
+  .table-wrap:has(> .rtable) { overflow: visible; border: 0; background: none; }
+  .admin .rtable, .admin .rtable tbody { display: block; }
+  .admin .rtable thead { display: none; }
+  .admin .rtable tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px 14px;
+    margin-bottom: 8px;
+    padding: 12px 14px;
+    background: var(--soot);
+    border: 1px solid var(--line-2);
+  }
+  .admin .rtable td { display: block; min-width: 0; padding: 0; border: 0; text-align: left; }
+  .admin .rtable td.num { text-align: left; }
+  .admin .rtable td[data-label]::before { content: attr(data-label); display: block; margin-bottom: 4px; font: 700 11px/1 var(--f-stencil); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ash); }
+  .admin .rtable td.cell-wide, .admin .rtable td.cell-action { grid-column: 1 / -1; }
+  .admin .rtable td.cell-action { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-start; padding-top: 10px; border-top: 1px solid var(--line); }
+  .admin .rtable td.cell-action .btn { flex: 1 1 auto; }
+  .admin tbody tr:hover td { background: none; }
+}
+
+/* =====================================================================
+   PENDAFTARAN
+   ===================================================================== */
+.reg-row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 24px; margin-top: 16px; }
+.reg-row .photo-field { flex: 1 1 320px; }
+.reg-submit { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; }
+.fighter-id .who { min-width: 0; }
+.fighter-id .who strong { display: block; overflow-wrap: anywhere; }
+.modal-photo { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line-2); }
+.modal-notes { margin-top: 16px; }
+.list-tools .tabs .tab { min-height: 40px; }
+
+/* =====================================================================
+   SPONSOR & HADIAH
+   ===================================================================== */
+.prize-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 18px 32px; align-items: start; }
+.ledger { margin: 0; }
+.ledger > div { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 10px 0 9px; border-bottom: 1px dashed var(--line-2); }
+.ledger dt { min-width: 0; font-stretch: 85%; font-weight: 700; font-size: 16px; line-height: 1.2; }
+.ledger dt small { margin-left: 8px; font-stretch: 100%; font-weight: 500; font-size: 13px; color: var(--ash); }
+.ledger dd { margin: 0; font: 800 22px/1 var(--f-stencil); letter-spacing: 0.02em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ledger .op { display: inline-block; width: 18px; color: var(--ash); }
+.ledger .is-cut dt, .ledger .is-cut dd { color: var(--ash); }
+.ledger .is-total { margin-top: 2px; padding-top: 12px; border-top: 4px double var(--bone); border-bottom: 0; }
+.ledger .is-total dt { font-stretch: 72%; font-weight: 900; font-size: 20px; text-transform: uppercase; }
+.ledger .is-total dd { font-size: 36px; }
+.prize-places { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.prize-places li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; background: var(--bg); border: 1px solid var(--line-2); border-left: 4px solid var(--line-2); }
+.prize-places .place-1 { border-left-color: var(--blood-hot); }
+.place-k { font: 800 16px/1 var(--f-stencil); letter-spacing: 0.08em; text-transform: uppercase; }
+.place-k small { margin-left: 6px; font-size: 13px; color: var(--ash); }
+.prize-places b { font: 800 26px/1 var(--f-stencil); letter-spacing: 0.02em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.prize-places .place-1 b { font-size: 32px; }
+.prize-card > .hint { margin-top: 14px; }
+
+.spon-form .hint b { color: var(--bone); }
+.spon-list { margin: 0; padding: 0; list-style: none; border: 1px solid var(--line-2); background: var(--soot); }
+.spon-row { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto auto; grid-template-areas: "logo name amount edit"; align-items: center; gap: 4px 16px; padding: 10px 14px; border-top: 1px solid var(--line); }
+.spon-row:first-child { border-top: 0; }
+.spon-row-logo { grid-area: logo; position: relative; width: 56px; height: 56px; background: var(--bg); border: 1px solid var(--line-2); }
+.spon-row-logo .mug { position: absolute; inset: 0; width: auto; height: auto; }
+.spon-row-logo .mug img { object-fit: contain; }
+.spon-row-name { grid-area: name; min-width: 0; }
+.spon-row-name strong { display: block; font-size: 17px; line-height: 1.2; overflow-wrap: anywhere; }
+.spon-row-amount { grid-area: amount; font: 800 22px/1 var(--f-stencil); letter-spacing: 0.02em; white-space: nowrap; }
+.spon-row .btn { grid-area: edit; }
+
+@media (max-width: 860px) {
+  .prize-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 520px) {
+  .ledger dt small { display: block; margin: 3px 0 0; }
+  .ledger .is-total dd { font-size: 30px; }
+  .spon-row { grid-template-columns: 48px minmax(0, 1fr) auto; grid-template-areas: "logo name edit" "logo amount edit"; padding: 10px 12px; }
+  .spon-row-logo { width: 48px; height: 48px; align-self: start; }
+  .spon-row-amount { font-size: 19px; }
+}
+
+/* ---------- arsip & turnamen ---------- */
+.admin select.list-select { width: auto; max-width: 100%; padding: 9px 12px; font-size: 15px; }
+.archive-foot { display: block; margin-top: 14px; }
+.stat .v.is-name { font: 800 22px/1.1 var(--f-sans); font-stretch: 75%; text-transform: uppercase; overflow-wrap: anywhere; }
+
+/* ---------- jarak teks bantu → isian ---------- */
+.admin .card .hint + .form-grid { margin-top: 14px; }
+.photo-field-empty { position: absolute; inset: 0; display: grid; place-items: center; padding: 12px; text-align: center; font: 800 15px/1.2 var(--f-stencil); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ash); background: repeating-linear-gradient(135deg, transparent 0 10px, rgba(214, 210, 200, 0.04) 10px 12px); }
+
+/* ---------- HP: ringkasan & "perlu diurus" lebih padat, biar form utama naik ---------- */
+@media (max-width: 760px) {
+  .now { gap: 4px; margin-bottom: 16px; }
+  .now-item { flex-wrap: nowrap; gap: 8px; padding: 7px 8px 7px 11px; }
+  .now-text { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: 15px; line-height: 1.25; }
+  .stats.is-compact { grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 6px; margin-bottom: 14px; }
+  .stats.is-compact .stat { padding: 9px 10px 10px; }
+  .stats.is-compact .k { font-size: 12px; }
+  .stats.is-compact .v { margin-top: 4px; font-size: 19px; }
+  .stats.is-compact .v.is-name { font-size: 16px; }
+  .stats.is-compact .s { display: none; }
+  .view-switch { margin-bottom: 12px; }
+}

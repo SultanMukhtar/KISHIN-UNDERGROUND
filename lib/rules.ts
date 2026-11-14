@@ -20,7 +20,6 @@ export function ruleBook(settings: Settings | null): RuleGroup[] {
         fee
           ? `Fighter wajib daftar ke Finance Registration dan lunas biaya pendaftaran ${fee} sebelum bracket dibuat.`
           : "Fighter wajib daftar ke Finance Registration dan lunas biaya pendaftaran sebelum bracket dibuat.",
-        "Pendaftaran berlaku per vol. Tiap vol baru, fighter daftar dan bayar lagi.",
         `Hadiah juara diambil dari uang pendaftaran dan sponsor. ${100 - PRIZE_CUT_PCT}% jadi total hadiah (${PRIZE_CUT_PCT}% masuk kas panitia), ` +
           `dibagi juara 1 ${PRIZE_SPLIT_PCT[0]}%, juara 2 ${PRIZE_SPLIT_PCT[1]}%, dan juara 3 ${PRIZE_SPLIT_PCT[2]}%.`,
         "Satu orang, satu nama fighter. Nama yang udah masuk bracket gak bisa dipakai orang lain.",

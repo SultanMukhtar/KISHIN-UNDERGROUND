@@ -93,7 +93,7 @@ Penonton (tanpa login) cuma bisa **baca**. Semua aturan di atas dijaga database 
 
 | Tugas | Siapa | Di mana |
 |---|---|---|
-| Daftarin fighter buat vol ini (fighter lama: ketik namanya), upload foto, tandai sudah bayar | Finance Registration | `/admin` → Pendaftaran |
+| Daftarin fighter, upload foto, tandai sudah bayar | Finance Registration | `/admin` → Pendaftaran |
 | Generate bracket (setelah pendaftaran ditutup) | Superadmin | `/admin` → Bracket → **Generate bracket** |
 | Catat taruhan sebelum fight mulai, kasih **kode slip** ke bettor | Finance Betting | `/admin` → Taruhan (atau klik fight-nya di Meja taruhan halaman penonton) |
 | Tampilkan fight minggu ini (poster) | Bracket Coordinator / MC | `/admin` → Bracket → centang **Tampil minggu ini** |
@@ -104,7 +104,7 @@ Penonton (tanpa login) cuma bisa **baca**. Semua aturan di atas dijaga database 
 Yang terjadi otomatis begitu **Menang** diklik: pemenang maju ke ronde berikutnya, yang kalah di semifinal masuk **Perebutan Juara 3**, catatan fight masuk **Arsip**, rekor fighter (menang / kalah / win rate) ikut berubah, taruhan dihitung, dan halaman penonton nampilin pengumuman hasil + cap WIN / LOSS. Begitu final selesai, papan **Juara** keisi sendiri.
 
 Catatan:
-- Bracket cuma pakai fighter yang terdaftar di vol ini dan statusnya **Sudah bayar**. Jumlah ganjil gak masalah — sisa slot jadi BYE (lolos otomatis).
+- Bracket cuma pakai fighter yang statusnya **Sudah bayar**. Jumlah ganjil gak masalah — sisa slot jadi BYE (lolos otomatis).
 - Salah klik? Klik tombol **Menang ✓** lagi buat batalin hasil (ada konfirmasi). Catatan arsipnya ikut dicabut.
 - Status fight: **Upcoming**, **Live**, **Completed**, **Postponed** (tombol Tunda), **Cancelled** (tombol Batalkan fight). Fight yang dibatalkan: semua taruhannya dihitung batal dan dikembalikan utuh.
 - **Buat ulang bracket** menghapus semua match turnamen yang lagi jalan, catatan fight-nya, DAN semua taruhannya. Turnamen arsip gak kesentuh.
@@ -112,15 +112,9 @@ Catatan:
 
 ## Turnamen & arsip
 
-- Selalu ada satu turnamen yang "jalan". Namanya diatur di `/admin` → **Turnamen**, dan tampil di papan Juara serta arsip.
-- **Mulai turnamen baru** menutup turnamen sekarang dan memindahkannya ke arsip: hasil, catatan fight, dan juaranya tetap tersimpan dan tampil di halaman penonton ("Juara turnamen sebelumnya" + filter turnamen di Fight history). Bracket, pendaftaran, dan daftar sponsor mulai kosong lagi.
+- Selalu ada satu turnamen yang "jalan". Namanya diatur di `/admin` → **Turnamen**, dan tampil di papan Juara serta arsip. Ganti nama turnamen (yang jalan atau arsip) otomatis ikut ngubah namanya di Fight history.
+- **Mulai turnamen baru** menutup turnamen sekarang dan memindahkannya ke arsip: hasil, catatan fight, dan juaranya tetap tersimpan dan tampil di halaman penonton ("Juara turnamen sebelumnya" + filter turnamen di Fight history). Bracket dan daftar sponsor baru mulai kosong, fighter tetap terdaftar. Centang **Reset status bayar semua fighter** kalau fighter harus bayar lagi; uang pendaftaran (dan hadiah juara) ikut mulai dari nol.
 - Arsip fight (`fight_history`) diisi database sendiri tiap hasil resmi masuk. Nama fighter disalin ke situ, jadi catatan tetap kebaca walau fighter-nya dihapus.
-
-## Pendaftaran per vol
-
-- Tiap vol (turnamen) punya pendaftaran sendiri: fighter daftar dan bayar lagi tiap vol baru. Tab **Pendaftaran** cuma nampilin fighter vol ini.
-- Fighter dari vol sebelumnya tinggal **ketik namanya** di form daftar (namanya muncul di saran). Foto, profil, dan riwayat fight-nya tetap nyambung.
-- Tombol **Keluarin** (buat fighter yang punya riwayat di vol lain) cuma ngeluarin dia dari pendaftaran vol ini, datanya gak dihapus. Fighter baru tanpa riwayat tetap pakai **Hapus**.
 
 ## Sponsor
 
@@ -130,7 +124,7 @@ Catatan:
 
 ## Hadiah juara
 
-- Sumbernya **uang pendaftaran** (fighter yang udah bayar di vol ini) + **uang sponsor** vol ini.
+- Sumbernya **uang pendaftaran** (semua fighter yang statusnya Sudah bayar) + **uang sponsor** turnamen yang lagi jalan.
 - Dipotong dulu **30%** buat kas panitia. Sisanya (70%) jadi total hadiah, dibagi **juara 1 = 50%**, **juara 2 = 30%**, **juara 3 = 20%**. Pecahan Yen dibulatkan ke bawah, sisanya masuk kas panitia.
 - Contoh: pendaftaran ¥80.000 + sponsor ¥525.000 = ¥605.000 → potongan ¥181.500 → hadiah ¥423.500 → juara 1 ¥211.750, juara 2 ¥127.050, juara 3 ¥84.700.
 - Halaman penonton nampilin hadiah tiap juara di papan **Juara** + total hadiahnya. Rincian lengkap (termasuk potongan kas) cuma kelihatan superadmin di `/admin` → **Sponsor & Hadiah**.
@@ -143,7 +137,7 @@ Catatan:
 - Kalau gak ada yang taruh ke fighter yang menang, seluruh uang pihak kalah masuk kas panitia.
 - Pecahan Yen dibulatkan ke bawah ke bettor; sisanya masuk kas panitia.
 - Status taruhan per fight: **Betting open** → **Betting closed** (fight mulai / ditutup panitia / fight batal) → **Settled** (hasil masuk).
-- Di `/admin` → **Taruhan**, tiap taruhan punya tiga kolom ini (penjelasannya juga ada di bawah tabel):
+- Di `/admin` → **Taruhan**, tiap taruhan punya tiga kolom ini:
   - **Status**: **Menunggu** (fight belum selesai), **Menang**, **Kalah** (gak dapat apa-apa), atau **Batal** (fight dibatalkan / jagoannya udah gak ada di fight itu, taruhan balik utuh).
   - **Payout**: jumlah Yen yang harus ditransfer ke rekening / Yentag bettor. "-" = gak ada yang perlu ditransfer.
   - **Dibayar**: dicentang setelah payout beneran ditransfer. **Belum** = masih utang ke bettor (masuk hitungan "Belum dibayar ke bettor"), **Sudah** = beres. Bettor lihat "Udah ditransfer" / "Belum ditransfer" lewat kode slip.
@@ -173,14 +167,14 @@ Catatan:
 | Tabel | Isi |
 |---|---|
 | `settings` | Nama event, tagline, hero, biaya daftar, house cut default, turnamen yang lagi jalan |
-| `fighters` | Nama, kelas, foto, status manual (aktif / cedera / skors / pensiun), pendaftaran vol ini (vol, status bayar, fee) |
+| `fighters` | Nama, kelas, foto, status manual (aktif / cedera / skors / pensiun), status bayar & fee pendaftaran |
 | `tournaments` | Nama, status, babak yang lagi jalan, juara 1–3 (diisi otomatis) |
 | `matches` | Posisi di bracket, dua fighter, status, pemenang, cara menang |
 | `fight_history` | Catatan resmi tiap fight yang selesai (diisi otomatis) |
 | `bets` | Taruhan: bettor, jagoan, nominal, status bayar |
 | `bet_log` | Riwayat semua transaksi taruhan (diisi otomatis) |
 | `sponsors` | Sponsor per turnamen: nama, foto, jumlah |
-| `prize_pool` (view) | Total uang pendaftaran + sponsor vol ini, bahan hadiah juara (cuma angka total, aman buat publik) |
+| `prize_pool` (view) | Total uang pendaftaran + sponsor turnamen yang lagi jalan, bahan hadiah juara (cuma angka total, aman buat publik) |
 | `admin_accounts` | Akun panitia + role |
 
 Total fight, menang, kalah, win rate, status "Gugur" / "Juara", dan total pool **dihitung** dari tabel di atas (`lib/fight.ts`, `lib/betting.ts`), gak disimpan sebagai angka terpisah, jadi gak mungkin gak sinkron.
