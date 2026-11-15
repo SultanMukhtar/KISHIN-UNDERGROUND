@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Reveal from "@/components/ui/Reveal";
+import { InkLogo } from "@/components/ui/Logo";
 import { yen } from "@/lib/betting";
 import { tilt, tornClip } from "@/lib/codes";
 import { PRIZE_CUT_PCT, type Prize } from "@/lib/prize";
@@ -84,6 +85,7 @@ export default function Sponsors({ sponsors, prize }: { sponsors: Sponsor[]; pri
         {showReceipt && (
           <Reveal as="li" kind="up" delay={90} className="w2 is-receipt">
             <div className="receipt" style={{ clipPath: tornClip("receipt", { top: false, bottom: true }, 6, 22) }}>
+              <InkLogo />
               <p className="receipt-head">Hitungan hadiah</p>
               <dl>
                 <div><dt>Uang sponsor</dt><dd>{yen(prize!.sponsors)}</dd></div>

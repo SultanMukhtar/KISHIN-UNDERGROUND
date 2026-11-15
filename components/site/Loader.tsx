@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { BrandMark } from "@/components/site/SiteChrome";
+import Logo from "@/components/ui/Logo";
 import { isCalm } from "@/lib/motion";
 
 /** Tanda "udah pernah lihat layar pembuka" (per tab). Dibaca juga sama script kecil di app/layout.tsx. */
@@ -69,7 +69,7 @@ export default function Loader({ ready, onOpen }: { ready: boolean; onOpen: () =
       <span className="boot-door boot-door-b" aria-hidden="true" />
       <div className="boot-core">
         <p className="boot-logo">
-          <BrandMark />
+          <Logo priority sizes="(max-width: 640px) 104px, 124px" />
           <span>Underground</span>
         </p>
         <p className="boot-line">{online ? "System online" : "Initializing fight system..."}</p>

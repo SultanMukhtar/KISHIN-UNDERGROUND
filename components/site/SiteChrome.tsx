@@ -1,15 +1,14 @@
 "use client";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Reveal from "@/components/ui/Reveal";
+import Logo from "@/components/ui/Logo";
 import { useMotion } from "@/lib/motion";
 
-/** Logo: cap merah kanji 地下 ("bawah tanah"). */
+/** Logo kecil di menu (stiker UNDERGROUND). Dekorasi: nama selalu ada sebagai teks di sebelahnya. */
 export function BrandMark({ className = "" }: { className?: string }) {
   return (
-    <span className={`brand-mark ${className}`} aria-hidden="true">
-      <b>地</b>
-      <b>下</b>
-    </span>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img className={`brand-mark ${className}`.trim()} src="/brand/underground-sticker-160.webp" width={160} height={160} alt="" decoding="async" draggable={false} />
   );
 }
 
@@ -88,7 +87,7 @@ export function SiteNav({ status, liveCount, sections }: NavProps) {
   return (
     <nav className={"site-nav" + (open ? " is-open" : "")} aria-label="Navigasi" ref={navRef}>
       <div className="wrap nav-inner">
-        <a className="nav-brand" href="#top" onClick={() => setOpen(false)}>
+        <a className="nav-brand" href="#top" aria-label="Underground" onClick={() => setOpen(false)}>
           <BrandMark />
           <span className="nav-name">Underground</span>
         </a>
@@ -176,7 +175,10 @@ export function SiteFooter({ updatedAt }: { updatedAt: number | null }) {
           <span className="foot-rule-text">Guru gak boleh tahu.</span>
         </Reveal>
         <Reveal className="foot-side" kind="fade" delay={120}>
-          <p className="foot-kanji" aria-hidden="true">武器禁止</p>
+          <div className="foot-brand">
+            <Logo className="foot-logo" sizes="92px" />
+            <p className="foot-kanji" aria-hidden="true">武器禁止</p>
+          </div>
           <p className="foot-service">Event roleplay Kishin High School. Semua fight, taruhan, dan uang di halaman ini fiksi, pakai mata uang RP.</p>
           <p className="foot-credit">
             Halaman ini update sendiri, gak perlu di-refresh.{ago && <> Terakhir update {ago}.</>}

@@ -206,7 +206,7 @@ html[data-boot="skip"] .boot { display: none; }
 .boot.is-open .boot-door-a { transform: translate3d(0, -101%, 0); }
 .boot.is-open .boot-door-b { transform: translate3d(0, 101%, 0); }
 .boot.is-open { pointer-events: none; }
-.boot-core { position: relative; z-index: 1; width: min(100% - 48px, 420px); display: grid; gap: 14px; transition: opacity 0.18s; }
+.boot-core { position: relative; z-index: 1; width: min(100% - 48px, 480px); display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; transition: opacity 0.18s; }
 .boot.is-open .boot-core { opacity: 0; }
 .boot-logo {
   display: flex;
@@ -216,13 +216,19 @@ html[data-boot="skip"] .boot { display: none; }
   font-family: var(--f-sans);
   font-stretch: 62%;
   font-weight: 900;
-  font-size: clamp(36px, 9vw, 58px);
+  font-size: clamp(24px, 9vw, 58px);
   line-height: 1;
   text-transform: uppercase;
+  flex-wrap: wrap; /* jaga-jaga kalau font belum kemuat & tulisannya kelebaran: turun ke bawah logo, gak kepotong layar */
   animation: boot-in 0.5s 0.1s var(--ease-out) both;
 }
-.boot-logo .brand-mark { width: 48px; height: 48px; }
-.boot-logo .brand-mark b { font-size: 19px; }
+.boot-logo .logo { width: clamp(64px, 26vw, 124px); height: auto; flex: none; transform: rotate(-6deg); animation: logo-slap 0.55s 0.12s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+/* stiker ditempel: jatuh dari dekat kamera, nempel, mantul dikit */
+@keyframes logo-slap {
+  0% { opacity: 0; transform: rotate(-16deg) scale(1.5); }
+  55% { opacity: 1; }
+  100% { opacity: 1; transform: rotate(-6deg) scale(1); }
+}
 .boot-line { margin: 0; font: 800 15px/1 var(--f-stencil); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ash); animation: boot-in 0.3s 0.45s both; }
 .boot.is-online .boot-line, .boot.is-open .boot-line { color: var(--bone); }
 .boot-bar { position: relative; display: block; height: 4px; background: var(--line); overflow: hidden; }
@@ -338,21 +344,42 @@ html[data-boot="skip"] .boot { display: none; }
   35% { opacity: 1; }
   to { opacity: 1; transform: none; clip-path: inset(-12% 0 -12% 0); }
 }
-.site .hero-tag, .site .hero-flyer, .site .hero-tally, .site .hero-kanji { opacity: 0; }
+.site .hero-tag, .site .hero-flyer, .site .hero-tally, .site .hero-kanji, .site .hero-logo { opacity: 0; }
 /* kunjungan ulang di tab yang sama: gak ada layar pembuka, jadi hero langsung kelihatan dari gambar pertama */
 html[data-boot="skip"] .site .hero-type .fit-line, html[data-boot="skip"] .site .hero-tag, html[data-boot="skip"] .site .hero-flyer,
-html[data-boot="skip"] .site .hero-tally, html[data-boot="skip"] .site .hero-kanji { opacity: 1; animation: none; }
+html[data-boot="skip"] .site .hero-tally, html[data-boot="skip"] .site .hero-kanji, html[data-boot="skip"] .site .hero-logo { opacity: 1; animation: none; }
 html[data-boot="skip"] .site .hero-beam, html[data-boot="skip"] .site .lamp-bulb { animation-play-state: running; }
 .site.is-booted .hero-tag { animation: rise 0.8s 0.55s var(--ease-out) both; }
 .site.is-booted .hero-flyer { animation: rise 0.9s 0.7s var(--ease-out) both; }
 .site.is-booted .hero-tally { animation: rise 0.8s 0.85s var(--ease-out) both; }
 .site.is-booted .hero-kanji { animation: rise 0.6s 0.45s var(--ease-out) both; }
+.site.is-booted .hero-logo { animation: hero-slap 0.6s 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+@keyframes hero-slap { 0% { opacity: 0; transform: rotate(-9deg) scale(1.45); } 55% { opacity: 1; } 100% { opacity: 1; transform: none; } }
 @keyframes rise { from { opacity: 0; translate: 0 22px; } to { opacity: 1; translate: 0 0; } }
 
 .hero-tally > div.is-live dd { color: var(--blood-hot); }
 .hero-tally > div.is-live dt::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 7px; border-radius: 50%; background: var(--blood-hot); animation: liveblink 1.6s steps(2, jump-none) infinite; }
 .flyer-more { display: inline-block; margin-top: 14px; font-stretch: 80%; font-weight: 800; font-size: 15px; color: var(--bg); text-decoration-color: var(--blood); text-decoration-thickness: 2px; text-underline-offset: 3px; }
 .flyer-more:hover { color: var(--blood); }
+
+/* =====================================================================
+   LOGO: stiker UNDERGROUND (tinta + kertas) yang ditempel di tembok
+   ===================================================================== */
+
+.logo { display: block; width: 100%; height: auto; user-select: none; }
+.nav-brand .brand-mark { transition: transform 0.25s var(--ease-mech); }
+.nav-brand:hover .brand-mark, .nav-brand:focus-visible .brand-mark { transform: rotate(4deg) scale(1.08); }
+/* hero: pas di bawah lampu, kena sorot */
+.hero-logo { grid-area: logo; position: relative; z-index: 2; align-self: center; justify-self: center; width: min(100%, 270px); }
+.hero-logo .logo { transform: rotate(-6deg); filter: drop-shadow(0 16px 22px rgba(0, 0, 0, 0.62)); }
+/* tablet & HP: ukuran pasti, biar tempatnya udah kepesan sebelum gambarnya kemuat (gak loncat). Samain sama `sizes` di Hero.tsx */
+@media (max-width: 980px) { .hero-logo { width: 150px; } }
+@media (max-width: 640px) { .hero-logo { width: 104px; } }
+/* footer */
+.foot-brand { display: flex; align-items: center; gap: 18px; }
+.foot-logo { width: 92px; flex: none; transform: rotate(-7deg); filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.5)); }
+/* struk hitungan hadiah: logo tinta di kepala struk */
+.receipt .logo-ink { display: block; width: 52px; height: 52px; margin: 0 auto 8px; }
 
 /* =====================================================================
    TICKER
@@ -1257,8 +1284,9 @@ html.calm { scroll-behavior: auto; }
 .calm .boot { transition: opacity 0.4s ease; }
 .calm .boot.is-open { opacity: 0; }
 .calm .boot-door { transition: none; }
+.calm .nav-brand:hover .brand-mark, .calm .nav-brand:focus-visible .brand-mark { transform: rotate(-5deg); }
 .calm .boot.is-open .boot-door-a, .calm .boot.is-open .boot-door-b { transform: none; }
-.calm .boot-logo, .calm .boot-line, .calm .boot-meta { animation-name: fade-in; }
+.calm .boot-logo, .calm .boot-line, .calm .boot-meta, .calm .boot-logo .logo { animation-name: fade-in; }
 
 /* navigasi */
 .calm .nav-ind { transition: opacity 0.2s; }
@@ -1271,7 +1299,7 @@ html.calm { scroll-behavior: auto; }
 .calm .hero-smoke, .calm .hero-lamp { animation: none; }
 .calm .hero-beam, .calm .lamp-bulb { animation: none; opacity: 1; }
 .calm .site.is-booted .hero-type .fit-line { animation-name: fade-in; animation-duration: 0.6s; }
-.calm .site.is-booted .hero-tag, .calm .site.is-booted .hero-flyer, .calm .site.is-booted .hero-tally, .calm .site.is-booted .hero-kanji { animation-name: fade-in; }
+.calm .site.is-booted .hero-tag, .calm .site.is-booted .hero-flyer, .calm .site.is-booted .hero-tally, .calm .site.is-booted .hero-kanji, .calm .site.is-booted .hero-logo { animation-name: fade-in; }
 
 /* ticker diam: baris pertama aja, sisanya kepotong */
 .calm .ticker-track { animation: none; width: 100%; }

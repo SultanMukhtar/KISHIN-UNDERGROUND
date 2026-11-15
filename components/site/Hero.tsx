@@ -1,6 +1,7 @@
 import FitLines, { narrowTitle, splitTitle } from "@/components/ui/FitLines";
 import Stamp from "@/components/ui/Stamp";
 import Mugshot from "@/components/ui/Mugshot";
+import Logo from "@/components/ui/Logo";
 import CountUp from "@/components/ui/CountUp";
 import { tornClip } from "@/lib/codes";
 import { yen } from "@/lib/betting";
@@ -29,6 +30,11 @@ export default function Hero({ eventName, tagline, heroUrl, stats }: Props) {
           <h1 className="sr-only">{eventName}</h1>
           <FitLines lines={lines} max={lines.length > 1 ? 210 : 300} className="hero-type is-wide" />
           <FitLines lines={narrowTitle(lines)} max={210} className="hero-type is-narrow" />
+        </div>
+
+        {/* stiker logo ditempel di tembok, pas di bawah lampu */}
+        <div className="hero-logo">
+          <Logo priority sizes="(max-width: 640px) 104px, (max-width: 980px) 150px, 270px" />
         </div>
 
         <aside className="hero-flyer" style={{ clipPath: tornClip("hero-flyer", { top: true, bottom: true, right: true }, 6) }}>

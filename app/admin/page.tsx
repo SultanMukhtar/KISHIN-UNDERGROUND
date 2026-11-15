@@ -20,6 +20,7 @@ import { useConfirm } from "@/components/admin/ConfirmDialog";
 import Modal from "@/components/ui/Modal";
 import { BrandMark } from "@/components/site/SiteChrome";
 import Stamp from "@/components/ui/Stamp";
+import Logo from "@/components/ui/Logo";
 
 type TabDef = {
   key: TabKey;
@@ -105,7 +106,7 @@ export default function AdminPage() {
   }, [evaluate]);
 
   switch (phase.kind) {
-    case "loading": return <div className="gate-msg"><p className="admin-loading" role="status">Ngecek akses…</p></div>;
+    case "loading": return <div className="gate-msg"><Logo className="gate-msg-logo" priority sizes="84px" /><p className="admin-loading" role="status">Ngecek akses…</p></div>;
     case "error": return (
       <div className="gate-msg">
         <div className="notice err" role="alert">Panel gak bisa dibuka: {phase.message}</div>
@@ -156,6 +157,7 @@ function Setup() {
   return (
     <div className="gate">
       <div className="gate-type">
+        <Logo className="gate-logo" priority sizes="(max-width: 640px) 84px, (max-width: 980px) 132px, 200px" />
         <h1>Kunci<br />basement</h1>
         <p>Halaman ini cuma muncul sekali. Akun pertama jadi superadmin: pegang semua operasional, pengaturan, dan akun panitia lain.</p>
         <Stamp tone="red" tilt={-5}><span className="jp">地下</span><span>Khusus panitia</span></Stamp>
@@ -196,6 +198,7 @@ function Login() {
   return (
     <div className="gate">
       <div className="gate-type">
+        <Logo className="gate-logo" priority sizes="(max-width: 640px) 84px, (max-width: 980px) 132px, 200px" />
         <h1>Khusus<br />panitia</h1>
         <p>Penonton gak perlu login. Balik ke <a href="/">halaman utama</a> buat lihat bracket dan hasil.</p>
         <Stamp tone="red" tilt={-5}><span className="jp">地下格闘</span><span>Dilarang masuk</span></Stamp>
